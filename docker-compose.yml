@@ -31,11 +31,13 @@ services:
       - SESSION_DIR=/data/sessions
       - FAILED_FLOWS_DIR=/data/failed_flows
       - API_WORKERS=2
+      # When using llama.cpp, point to the container name:
+      # - LLAMACPP_BASE_URL=http://llamacpp:8080
     volumes:
       - chroma_data:/data/chroma
       - session_data:/data/sessions
       - failed_flows:/data/failed_flows
-      - ./docs:/app/docs                  # graph export, readable on host
+      - ./docs:/app/docs
     depends_on:
       chroma:
         condition: service_healthy
@@ -46,6 +48,40 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
+    networks:
+      - triage-net
+
+  # ── llama.cpp Local LLM Server (optional — zero API cost) ──────────────────
+  # Activate by running:   docker compose --profile llamacpp up
+  #
+  # You must place a .gguf model file in ./models/ first:
+  #   python scripts/download_model.py --model llama3.1-8b-q4
+  #
+  # Then switch your .env:
+  #   LLM_PROVIDER=llamacpp
+  #   LLAMACPP_BASE_URL=http://llamacpp:8080
+  llamacpp:
+    image: ghcr.io/ggerganov/llama.cpp:server
+    container_name: triage-llamacpp
+    profiles: ["llamacpp"]          # only starts with: docker compose --profile llamacpp up
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./models:/models:ro         # mount your downloaded .gguf files here
+    command: >
+      --model /models/llama-3.1-8b-instruct.Q4_K_M.gguf
+      --host 0.0.0.0
+      --port 8080
+      --n-gpu-layers 0
+      --threads 4
+      --ctx-size 4096
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s            # model loading takes time
     networks:
       - triage-net
 

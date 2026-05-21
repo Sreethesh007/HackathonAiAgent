@@ -1,164 +1,174 @@
 #!/usr/bin/env python3
 """
 Environment sanity checker — run before starting the app.
-
-Checks:
-  1. All required env vars are set and non-empty
-  2. Data directories are writable
-  3. Anthropic API key is reachable (lightweight ping)
-  4. ChromaDB is importable (local mode — no server needed)
+Handles both LLM_PROVIDER=anthropic and LLM_PROVIDER=llamacpp.
 
 Exit code 0 = all clear, 1 = one or more failures.
 """
-
 from __future__ import annotations
-
-import os
-import sys
-import time
+import os, sys, time
 from pathlib import Path
 
-# Ensure project root is in path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-GREEN = "\033[92m"
-RED   = "\033[91m"
-RESET = "\033[0m"
-BOLD  = "\033[1m"
+GREEN = "\033[92m"; RED = "\033[91m"; YELLOW = "\033[93m"; RESET = "\033[0m"; BOLD = "\033[1m"
+passed = 0; failed = 0; warned = 0
 
-passed = 0
-failed = 0
+def ok(label, detail=""):
+    global passed; passed += 1
+    print(f"  {GREEN}✓{RESET} {label}" + (f"  ({detail})" if detail else ""))
 
+def fail(label, detail=""):
+    global failed; failed += 1
+    print(f"  {RED}✗{RESET} {label}" + (f"  — {detail}" if detail else ""))
 
-def ok(label: str, detail: str = "") -> None:
-    global passed
-    passed += 1
-    suffix = f"  ({detail})" if detail else ""
-    print(f"  {GREEN}✓{RESET} {label}{suffix}")
+def warn(label, detail=""):
+    global warned; warned += 1
+    print(f"  {YELLOW}⚠{RESET} {label}" + (f"  — {detail}" if detail else ""))
 
-
-def fail(label: str, detail: str = "") -> None:
-    global failed
-    failed += 1
-    suffix = f"  ✗ {detail}" if detail else ""
-    print(f"  {RED}✗{RESET} {label}{suffix}")
-
-
-def section(title: str) -> None:
+def section(title):
     print(f"\n{BOLD}{title}{RESET}")
 
-
-# ── 1. Required environment variables ────────────────────────────────────────
-section("Environment Variables")
-
-REQUIRED_VARS = {
-    "ANTHROPIC_API_KEY": "LLM access",
-    "JWT_SECRET":        "API authentication",
-    "CHROMA_PERSIST_DIR":"Vector store location",
-    "SESSION_DIR":       "Session storage",
-    "LOG_LEVEL":         "Logging configuration",
-}
-
+# ── Load .env ─────────────────────────────────────────────────────────────────
+section("Environment File")
 dotenv_path = Path(".env")
 if dotenv_path.exists():
-    from dotenv import load_dotenv
-    load_dotenv()
-    ok(".env file found")
-else:
-    fail(".env file", "not found — copy from .env.example")
-
-for var, purpose in REQUIRED_VARS.items():
-    value = os.getenv(var, "")
-    if value and value not in ("your_key_here", "change_me", "change_me_to_a_long_random_string_in_production"):
-        ok(f"{var}", purpose)
-    else:
-        fail(f"{var}", f"missing or placeholder ({purpose})")
-
-# ── 2. Data directories ───────────────────────────────────────────────────────
-section("Data Directories")
-
-DIRS = [
-    os.getenv("CHROMA_PERSIST_DIR", "./data/chroma"),
-    os.getenv("SESSION_DIR", "./data/sessions"),
-    os.getenv("FAILED_FLOWS_DIR", "./data/failed_flows"),
-]
-
-for d in DIRS:
-    p = Path(d)
-    p.mkdir(parents=True, exist_ok=True)
     try:
-        test_file = p / ".write_test"
-        test_file.write_text("ok")
-        test_file.unlink()
+        from dotenv import load_dotenv
+        load_dotenv()
+        ok(".env file found and loaded")
+    except ImportError:
+        # Manual parse without python-dotenv
+        for line in dotenv_path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                os.environ.setdefault(k.strip(), v.strip())
+        ok(".env file found (parsed manually)")
+else:
+    fail(".env file", "not found — run: cp .env.example .env")
+
+provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
+
+# ── Provider detection ────────────────────────────────────────────────────────
+section(f"LLM Provider: {provider.upper()}")
+if provider == "anthropic":
+    key = os.getenv("ANTHROPIC_API_KEY", "")
+    if key and key not in ("your_key_here", ""):
+        ok("ANTHROPIC_API_KEY", "set")
+    else:
+        fail("ANTHROPIC_API_KEY", "missing or placeholder — get one at console.anthropic.com")
+    model = os.getenv("LLM_MODEL", "claude-sonnet-4-20250514")
+    ok("LLM_MODEL", model)
+
+elif provider == "llamacpp":
+    base_url = os.getenv("LLAMACPP_BASE_URL", "http://localhost:8080")
+    ok("LLAMACPP_BASE_URL", base_url)
+    ok("LLAMACPP_MODEL", os.getenv("LLAMACPP_MODEL", "llama-3.1-8b-instruct"))
+    ok("LLAMACPP_N_CTX", os.getenv("LLAMACPP_N_CTX", "4096"))
+    warn("ANTHROPIC_API_KEY", "not required when LLM_PROVIDER=llamacpp (skipped)")
+else:
+    fail("LLM_PROVIDER", f"must be 'anthropic' or 'llamacpp', got '{provider}'")
+
+# ── Core env vars ─────────────────────────────────────────────────────────────
+section("Core Settings")
+REQUIRED = {"JWT_SECRET": "API auth", "CHROMA_PERSIST_DIR": "vector store",
+            "SESSION_DIR": "session storage", "LOG_LEVEL": "logging"}
+for var, purpose in REQUIRED.items():
+    val = os.getenv(var, "")
+    if val and val not in ("change_me", "change_me_to_a_long_random_string_in_production"):
+        ok(var, purpose)
+    else:
+        fail(var, f"missing or placeholder ({purpose})")
+
+# ── Data directories ──────────────────────────────────────────────────────────
+section("Data Directories")
+for d in [os.getenv("CHROMA_PERSIST_DIR","./data/chroma"),
+          os.getenv("SESSION_DIR","./data/sessions"),
+          os.getenv("FAILED_FLOWS_DIR","./data/failed_flows")]:
+    p = Path(d); p.mkdir(parents=True, exist_ok=True)
+    try:
+        tf = p / ".write_test"; tf.write_text("ok"); tf.unlink()
         ok(str(p), "writable")
     except OSError as e:
-        fail(str(p), f"not writable: {e}")
+        fail(str(p), str(e))
 
-# ── 3. Python imports ─────────────────────────────────────────────────────────
-section("Python Imports")
-
-PACKAGES = {
-    "langchain":      "LangChain core",
-    "langgraph":      "Agent orchestration",
-    "langchain_anthropic": "Anthropic LLM",
-    "chromadb":       "Vector store",
-    "fastapi":        "REST API",
-    "pydantic":       "Data validation",
-    "structlog":      "Structured logging",
-    "prometheus_client": "Metrics",
-    "tenacity":       "Retry logic",
-    "jose":           "JWT auth",
-}
-
+# ── Python imports ─────────────────────────────────────────────────────────────
+section("Python Packages")
+PACKAGES = {"langchain": "core", "langgraph": "orchestration", "chromadb": "vector store",
+            "fastapi": "REST API", "pydantic": "validation", "structlog": "logging",
+            "prometheus_client": "metrics", "tenacity": "retries", "jose": "JWT auth"}
 for pkg, purpose in PACKAGES.items():
     try:
-        __import__(pkg)
-        ok(pkg, purpose)
-    except ImportError as e:
-        fail(pkg, f"not installed: {e}")
+        __import__(pkg); ok(pkg, purpose)
+    except ImportError:
+        fail(pkg, f"run: pip install {pkg}")
 
-# ── 4. Anthropic API reachability ────────────────────────────────────────────
-section("Anthropic API")
-
-api_key = os.getenv("ANTHROPIC_API_KEY", "")
-if api_key and api_key != "your_key_here":
+# Provider-specific package
+if provider == "anthropic":
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
+        import langchain_anthropic; ok("langchain-anthropic", "Anthropic LLM")
+    except ImportError:
+        fail("langchain-anthropic", "run: pip install langchain-anthropic")
+elif provider == "llamacpp":
+    try:
+        import langchain_openai; ok("langchain-openai", "llama.cpp OpenAI-compat client")
+    except ImportError:
+        fail("langchain-openai", "run: pip install langchain-openai")
+
+# ── Provider connectivity ──────────────────────────────────────────────────────
+section("Provider Connectivity")
+if provider == "anthropic":
+    key = os.getenv("ANTHROPIC_API_KEY", "")
+    if key and key != "your_key_here":
+        try:
+            import anthropic
+            client = anthropic.Anthropic(api_key=key)
+            start = time.perf_counter()
+            client.messages.create(model="claude-haiku-4-5-20251001", max_tokens=5,
+                                   messages=[{"role":"user","content":"ping"}])
+            ok("Anthropic API", f"reachable ({round((time.perf_counter()-start)*1000)}ms)")
+        except Exception as e:
+            fail("Anthropic API", str(e)[:80])
+    else:
+        warn("Anthropic API", "skipped (key not set)")
+elif provider == "llamacpp":
+    base_url = os.getenv("LLAMACPP_BASE_URL", "http://localhost:8080")
+    try:
+        import urllib.request, json
+        req = urllib.request.Request(f"{base_url}/health", method="GET")
         start = time.perf_counter()
-        msg = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=5,
-            messages=[{"role": "user", "content": "ping"}],
-        )
-        latency_ms = round((time.perf_counter() - start) * 1000)
-        ok("Anthropic API", f"reachable ({latency_ms}ms)")
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            latency = round((time.perf_counter()-start)*1000)
+            ok(f"llama.cpp server at {base_url}", f"reachable ({latency}ms)")
     except Exception as e:
-        fail("Anthropic API", str(e)[:80])
-else:
-    fail("Anthropic API", "ANTHROPIC_API_KEY not set — skip if running without LLM")
+        fail(f"llama.cpp server at {base_url}",
+             f"not reachable — start it first (see .env.example for the command): {str(e)[:60]}")
 
-# ── 5. ChromaDB (local mode) ──────────────────────────────────────────────────
+# ── ChromaDB ──────────────────────────────────────────────────────────────────
 section("ChromaDB")
-
 try:
     import chromadb
-    persist_dir = os.getenv("CHROMA_PERSIST_DIR", "./data/chroma")
-    client = chromadb.PersistentClient(path=persist_dir)
-    collections = client.list_collections()
-    ok("ChromaDB local client", f"persist_dir={persist_dir}, collections={len(collections)}")
+    client = chromadb.PersistentClient(path=os.getenv("CHROMA_PERSIST_DIR","./data/chroma"))
+    cols = client.list_collections()
+    ok("ChromaDB local client", f"{len(cols)} collection(s) found")
+    if not cols:
+        warn("Knowledge base", "empty — run: python scripts/seed_knowledge.py")
 except Exception as e:
     fail("ChromaDB", str(e)[:80])
 
-# ── Summary ───────────────────────────────────────────────────────────────────
-print(f"\n{'─'*45}")
-total = passed + failed
-print(f"  {GREEN}{passed}{RESET}/{total} checks passed  |  {RED}{failed}{RESET} failed")
-
+# ── Summary ────────────────────────────────────────────────────────────────────
+total = passed + failed + warned
+print(f"\n{'─'*50}")
+print(f"  {GREEN}{passed}{RESET} passed  {RED}{failed}{RESET} failed  {YELLOW}{warned}{RESET} warnings  (of {total} checks)")
 if failed > 0:
     print(f"\n  {RED}Fix the failing checks before starting the application.{RESET}")
     sys.exit(1)
 else:
-    print(f"\n  {GREEN}All checks passed — ready to run!{RESET}")
-    print("  Run: make run-dev")
+    print(f"\n  {GREEN}✓ All critical checks passed — ready to start!{RESET}")
+    if provider == "anthropic":
+        print("  Run: make run-dev")
+    else:
+        print(f"  Ensure llama.cpp server is running at {os.getenv('LLAMACPP_BASE_URL','http://localhost:8080')}")
+        print("  Run: make run-dev")
     sys.exit(0)

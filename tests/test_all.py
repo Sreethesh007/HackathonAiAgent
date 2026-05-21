@@ -252,11 +252,11 @@ class TestResearchAgent:
     def test_research_fallback_no_vector_store(self, emergency_state):
         """Without a vector store, research should use built-in fallback guidelines."""
         from src.agents.research_agent import ResearchAgent
-        agent = ResearchAgent(vector_store=None)
-
-        with patch.object(agent, '_summarise', wraps=agent._summarise):
-            result = agent.retrieve(emergency_state)
-
+        # Inject a mock LLM so the test doesn't call get_llm() (which needs a real API key)
+        mock_llm = MagicMock()
+        agent = ResearchAgent(llm=mock_llm, vector_store=None)
+        result = agent.retrieve(emergency_state)
+        # Fallback path returns built-in guidelines without calling LLM
         assert result.research.summary != ""
         assert result.research.confidence_score > 0
 

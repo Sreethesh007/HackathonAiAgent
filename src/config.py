@@ -17,9 +17,26 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # LLM
+    # ── LLM Provider ───────────────────────────────────────────────────────
+    # Switch between providers with a single env var:
+    #   LLM_PROVIDER=anthropic   → Anthropic API (default)
+    #   LLM_PROVIDER=llamacpp    → local llama.cpp server (zero API cost)
+    llm_provider: str = "anthropic"          # "anthropic" | "llamacpp"
+
+    # Anthropic settings (used when llm_provider=anthropic)
     anthropic_api_key: str = ""
     llm_model: str = "claude-sonnet-4-20250514"
+
+    # llama.cpp settings (used when llm_provider=llamacpp)
+    # Run the llama.cpp server with:
+    #   ./llama-server -m models/llama-3.1-8b-instruct.gguf --port 8080
+    llamacpp_base_url: str = "http://localhost:8080"
+    llamacpp_model: str = "llama-3.1-8b-instruct"   # display name only
+    llamacpp_n_ctx: int = 4096          # context window (match your .gguf)
+    llamacpp_n_threads: int = 4         # CPU threads for inference
+    llamacpp_n_gpu_layers: int = 0      # 0 = CPU only; >0 = offload to GPU
+
+    # Shared LLM settings (apply to both providers)
     llm_max_tokens: int = 2048
     llm_temperature: float = 0.1
 
@@ -68,6 +85,25 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",")]
+
+    @property
+    def using_llamacpp(self) -> bool:
+        return self.llm_provider.lower() == "llamacpp"
+
+    @property
+    def using_anthropic(self) -> bool:
+        return self.llm_provider.lower() == "anthropic"
+
+    def validate_llm_config(self) -> list[str]:
+        """Return list of config problems (empty = all good)."""
+        issues = []
+        if self.using_anthropic and not self.anthropic_api_key:
+            issues.append("ANTHROPIC_API_KEY is required when LLM_PROVIDER=anthropic")
+        if self.using_llamacpp and not self.llamacpp_base_url:
+            issues.append("LLAMACPP_BASE_URL is required when LLM_PROVIDER=llamacpp")
+        if self.llm_provider not in ("anthropic", "llamacpp"):
+            issues.append(f"LLM_PROVIDER must be 'anthropic' or 'llamacpp', got '{self.llm_provider}'")
+        return issues
 
     def ensure_dirs(self) -> None:
         """Create required local directories on startup."""

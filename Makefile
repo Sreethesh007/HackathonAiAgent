@@ -7,16 +7,46 @@ APP_MODULE := src.api.main:app
 TEST_DIR   := tests
 
 help:  ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-22s\033[0m %s\n", $$1, $$2}'
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
-install:  ## Install all dependencies
+install:  ## Install all dependencies (both providers)
 	$(PIP) install -e ".[dev]"
 	cp -n .env.example .env || true
 	@echo "✓ Dependencies installed. Fill in .env before running."
 
-env-check:  ## Verify environment is correctly configured
+install-llamacpp:  ## Install extra deps for llama.cpp provider
+	$(PIP) install langchain-openai
+	@echo "✓ llama.cpp client installed. Download a model with: make download-model"
+
+env-check:  ## Verify environment is correctly configured (provider-aware)
 	$(PYTHON) scripts/check_env.py
+
+# ── LLM Provider switching ────────────────────────────────────────────────────
+use-anthropic:  ## Switch to Anthropic Claude API
+	@sed -i 's/^LLM_PROVIDER=.*/LLM_PROVIDER=anthropic/' .env
+	@echo "✓ Switched to Anthropic. Set ANTHROPIC_API_KEY in .env and restart."
+
+use-llamacpp:  ## Switch to local llama.cpp server
+	@sed -i 's/^LLM_PROVIDER=.*/LLM_PROVIDER=llamacpp/' .env
+	@echo "✓ Switched to llama.cpp. Ensure the server is running on port 8080."
+	@echo "  Check with: make check-llamacpp"
+
+provider-status:  ## Show active LLM provider and connection status
+	@$(PYTHON) -c "import sys; sys.path.insert(0,'src'); \
+		from src.llm.provider import get_provider_info; \
+		info = get_provider_info(); \
+		[print(f'  {k}: {v}') for k,v in info.items()]"
+
+# ── llama.cpp helpers ─────────────────────────────────────────────────────────
+list-models:  ## List available GGUF models for download
+	$(PYTHON) scripts/download_model.py --list
+
+download-model:  ## Download a GGUF model  (usage: make download-model MODEL=llama3.1-8b-q4)
+	$(PYTHON) scripts/download_model.py --model $(or $(MODEL),llama3.1-8b-q4)
+
+check-llamacpp:  ## Check if llama.cpp server is running
+	$(PYTHON) scripts/download_model.py --check --url $(or $(URL),http://localhost:8080)
 
 # ── Development ───────────────────────────────────────────────────────────────
 run-dev:  ## Start API in development mode (hot-reload)

@@ -32,6 +32,7 @@ from src.api.schemas import (
     ContinueRequest,
     ContinueResponse,
     HealthResponse,
+    ProviderInfoResponse,
     TriageRequest,
     TriageResponse,
     SessionStatusResponse,
@@ -39,6 +40,7 @@ from src.api.schemas import (
 )
 from src.config import settings
 from src.graph.pipeline import HealthcareTriageGraph
+from src.llm.provider import check_provider_health, get_provider_info
 from src.observability.logging import configure_logging, get_logger
 from src.observability.metrics import ACTIVE_SESSIONS, API_LATENCY, API_REQUESTS
 
@@ -57,7 +59,21 @@ async def lifespan(app: FastAPI):
 
     configure_logging()
     settings.ensure_dirs()
-    log.info("api_startup", model=settings.llm_model, environment=settings.environment)
+
+    # Validate LLM config before starting — fail fast with a clear message
+    issues = settings.validate_llm_config()
+    if issues:
+        for issue in issues:
+            log.error("llm_config_error", detail=issue)
+        raise RuntimeError("Invalid LLM configuration. Check your .env file.\n" + "\n".join(issues))
+
+    provider_info = get_provider_info()
+    log.info(
+        "api_startup",
+        environment=settings.environment,
+        llm_provider=provider_info["provider"],
+        llm_model=provider_info.get("model", "unknown"),
+    )
 
     _pipeline = HealthcareTriageGraph()
     _pipeline.export_mermaid()   # write graph diagram to docs/
@@ -143,14 +159,28 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 async def health():
-    """Liveness + readiness probe."""
+    """Liveness + readiness probe — includes active LLM provider info."""
+    provider = get_provider_info()
     return HealthResponse(
         status="ok",
         version="1.0.0",
         uptime_seconds=round(time.time() - _start_time),
         environment=settings.environment,
         pipeline_ready=_pipeline is not None,
+        llm_provider=provider["provider"],
+        llm_model=provider.get("model", "unknown"),
     )
+
+
+@app.get("/health/llm", response_model=ProviderInfoResponse, tags=["System"])
+async def health_llm(current_user: TokenData = Depends(get_current_user)):
+    """
+    Deep LLM provider health check — sends a real ping to the active provider.
+    Use this to verify the LLM is reachable before running triage.
+    """
+    result = check_provider_health()
+    status_code = 200 if result["ok"] else 503
+    return JSONResponse(content=result, status_code=status_code)
 
 
 # ── Metrics ──────────────────────────────────────────────────────────────────

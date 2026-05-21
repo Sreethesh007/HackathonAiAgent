@@ -18,11 +18,12 @@ from __future__ import annotations
 
 import time
 
-from langchain_anthropic import ChatAnthropic
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.agent_state import AgentName, AgentState, FlowStatus
 from src.config import settings
+from src.llm.provider import get_llm
 from src.observability.logging import get_logger
 from src.observability.metrics import AGENT_CALLS, AGENT_LATENCY, LLM_TOKENS_USED
 
@@ -59,13 +60,8 @@ CRITICAL RULES:
 class OrchestratorAgent:
     """Decomposes patient goals and routes to specialist agents."""
 
-    def __init__(self, llm: ChatAnthropic | None = None) -> None:
-        self.llm = llm or ChatAnthropic(
-            model=settings.llm_model,
-            max_tokens=512,
-            temperature=0.0,          # deterministic routing decisions
-            anthropic_api_key=settings.anthropic_api_key,
-        )
+    def __init__(self, llm: BaseChatModel | None = None) -> None:
+        self.llm = llm or get_llm(temperature=0.0, max_tokens=512)
         self.name = AgentName.ORCHESTRATOR
 
     # ── Main entrypoint ─────────────────────────────────────────────────────

@@ -20,12 +20,13 @@ from __future__ import annotations
 import json
 import time
 
-from langchain_anthropic import ChatAnthropic
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.agent_state import AgentName, AgentState, TriageResult, UrgencyLevel
 from src.config import settings
+from src.llm.provider import get_llm
 from src.observability.logging import get_logger
 from src.observability.metrics import AGENT_CALLS, AGENT_LATENCY, LLM_TOKENS_USED
 from src.tools.clinical_tools import severity_scale, symptom_lookup
@@ -63,13 +64,8 @@ IMPORTANT: You are NOT diagnosing. You are triaging. Use conservative (higher) s
 class TriageAgent:
     """Clinical triage assessment using ABCDE framework + LLM reasoning."""
 
-    def __init__(self, llm: ChatAnthropic | None = None) -> None:
-        self.llm = llm or ChatAnthropic(
-            model=settings.llm_model,
-            max_tokens=512,
-            temperature=0.0,
-            anthropic_api_key=settings.anthropic_api_key,
-        )
+    def __init__(self, llm: BaseChatModel | None = None) -> None:
+        self.llm = llm or get_llm(temperature=0.0, max_tokens=512)
         self.name = AgentName.TRIAGE
 
     # ── Main entrypoint ─────────────────────────────────────────────────────

@@ -14,11 +14,12 @@ from __future__ import annotations
 import json
 import time
 
-from langchain_anthropic import ChatAnthropic
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.agent_state import AgentName, AgentState, FlowStatus, UrgencyLevel
 from src.config import settings
+from src.llm.provider import get_llm
 from src.observability.logging import get_logger
 from src.observability.metrics import AGENT_CALLS, AGENT_LATENCY, FLOW_COMPLETIONS, HUMAN_REVIEWS
 
@@ -44,13 +45,8 @@ You will receive structured JSON — respond ONLY with the patient message text 
 class Synthesizer:
     """Produces the final patient-facing response from the full pipeline state."""
 
-    def __init__(self, llm: ChatAnthropic | None = None) -> None:
-        self.llm = llm or ChatAnthropic(
-            model=settings.llm_model,
-            max_tokens=400,
-            temperature=0.3,   # slight warmth in patient comms
-            anthropic_api_key=settings.anthropic_api_key,
-        )
+    def __init__(self, llm: BaseChatModel | None = None) -> None:
+        self.llm = llm or get_llm(temperature=0.3, max_tokens=400)
         self.name = AgentName.SYNTHESIZER
 
     def synthesize(self, state: AgentState) -> AgentState:

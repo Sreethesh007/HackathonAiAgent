@@ -16,12 +16,13 @@ import json
 import time
 from functools import lru_cache
 
-from langchain_anthropic import ChatAnthropic
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.agent_state import AgentName, AgentState, ResearchResult
 from src.config import settings
+from src.llm.provider import get_llm
 from src.observability.logging import get_logger
 from src.observability.metrics import AGENT_CALLS, AGENT_LATENCY, LLM_TOKENS_USED
 
@@ -70,14 +71,9 @@ FALLBACK_GUIDELINES: dict[str, dict] = {
 class ResearchAgent:
     """Retrieves and summarises clinical guidelines relevant to the triage outcome."""
 
-    def __init__(self, llm: ChatAnthropic | None = None, vector_store=None) -> None:
-        self.llm = llm or ChatAnthropic(
-            model=settings.llm_model,
-            max_tokens=768,
-            temperature=0.1,
-            anthropic_api_key=settings.anthropic_api_key,
-        )
-        self.vector_store = vector_store   # injected; None = use fallback
+    def __init__(self, llm: BaseChatModel | None = None, vector_store=None) -> None:
+        self.llm = llm or get_llm(temperature=0.1, max_tokens=768)
+        self.vector_store = vector_store
         self.name = AgentName.RESEARCH
 
     # ── Main entrypoint ─────────────────────────────────────────────────────

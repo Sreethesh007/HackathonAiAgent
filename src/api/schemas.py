@@ -68,6 +68,20 @@ class HealthResponse(BaseModel):
     uptime_seconds: int
     environment: str
     pipeline_ready: bool
+    llm_provider: str = ""
+    llm_model: str = ""
+
+
+class ProviderInfoResponse(BaseModel):
+    ok: bool
+    provider: str
+    model: str = ""
+    latency_ms: int = 0
+    error: str | None = None
+    base_url: str | None = None       # llama.cpp only
+    n_ctx: int | None = None          # llama.cpp only
+    n_gpu_layers: int | None = None   # llama.cpp only
+    api_key_set: bool | None = None   # anthropic only
 
 
 class ErrorDetail(BaseModel):

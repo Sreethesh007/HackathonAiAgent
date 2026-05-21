@@ -11,6 +11,7 @@ dependencies = [
     "langchain>=0.2",
     "langgraph>=0.1",
     "langchain-anthropic>=0.1",
+    "langchain-openai>=0.1",
     "langchain-community>=0.2",
     "chromadb>=0.5",
     "fastapi>=0.111",
