@@ -1,0 +1,121 @@
+version: "3.9"
+
+# ── Healthcare Triage Agent — Local On-Premise Stack ─────────────────────────
+# Services:
+#   app        — FastAPI triage agent (port 8000)
+#   chroma     — Local vector store   (port 8001)
+#   prometheus — Metrics scraper      (port 9090)
+#   grafana    — Dashboard            (port 3000)
+#
+# Quickstart:
+#   cp .env.example .env && nano .env   # fill ANTHROPIC_API_KEY
+#   docker compose up -d
+#   curl http://localhost:8000/health
+
+services:
+
+  # ── Triage Agent API ────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: healthcare-triage-agent:latest
+    container_name: triage-app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - CHROMA_PERSIST_DIR=/data/chroma
+      - SESSION_DIR=/data/sessions
+      - FAILED_FLOWS_DIR=/data/failed_flows
+      - API_WORKERS=2
+    volumes:
+      - chroma_data:/data/chroma
+      - session_data:/data/sessions
+      - failed_flows:/data/failed_flows
+      - ./docs:/app/docs                  # graph export, readable on host
+    depends_on:
+      chroma:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - triage-net
+
+  # ── ChromaDB Vector Store ───────────────────────────────────────────────────
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: triage-chroma
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - triage-net
+
+  # ── Prometheus Metrics ──────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: triage-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=30d
+    restart: unless-stopped
+    networks:
+      - triage-net
+
+  # ── Grafana Dashboard ───────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: triage-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - triage-net
+
+volumes:
+  chroma_data:
+    driver: local
+  session_data:
+    driver: local
+  failed_flows:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  triage-net:
+    driver: bridge
