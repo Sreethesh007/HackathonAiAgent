@@ -29,6 +29,7 @@ dependencies = [
     "tqdm>=4.66",
     "tiktoken>=0.7",
     "pypdf>=4.2",
+    "sentence-transformers>=3.0",
 ]
 
 [project.optional-dependencies]

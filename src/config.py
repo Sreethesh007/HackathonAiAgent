@@ -43,7 +43,11 @@ class Settings(BaseSettings):
     # Vector Store
     chroma_persist_dir: Path = Path("./data/chroma")
     chroma_collection_name: str = "medical_guidelines"
-    embedding_model: str = "text-embedding-3-small"
+    # Embedding model — "all-MiniLM-L6-v2" runs fully offline (no API key needed).
+    # Switch to "text-embedding-3-small" and set embedding_provider=openai for cloud.
+    embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_provider: str = "sentence_transformers"  # "sentence_transformers" | "openai"
+    chroma_n_results: int = 5  # top-k documents returned per similarity search
 
     # Session Memory
     session_dir: Path = Path("./data/sessions")

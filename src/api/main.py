@@ -40,6 +40,8 @@ from src.api.schemas import (
 )
 from src.config import settings
 from src.graph.pipeline import HealthcareTriageGraph
+from src.agents.research_agent import ResearchAgent
+from src.memory import KnowledgeRetriever
 from src.llm.provider import check_provider_health, get_provider_info
 from src.observability.logging import configure_logging, get_logger
 from src.observability.metrics import ACTIVE_SESSIONS, API_LATENCY, API_REQUESTS
@@ -49,13 +51,14 @@ log = get_logger(__name__)
 # ── Application startup ──────────────────────────────────────────────────────
 
 _pipeline: HealthcareTriageGraph | None = None
+_retriever: KnowledgeRetriever | None = None
 _start_time = time.time()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown lifecycle."""
-    global _pipeline
+    global _pipeline, _retriever
 
     configure_logging()
     settings.ensure_dirs()
@@ -75,7 +78,27 @@ async def lifespan(app: FastAPI):
         llm_model=provider_info.get("model", "unknown"),
     )
 
-    _pipeline = HealthcareTriageGraph()
+    # Initialise the knowledge retriever (ChromaDB + sentence-transformers)
+    try:
+        _retriever = KnowledgeRetriever()
+        kb_health = _retriever.health_check()
+        log.info("knowledge_base_ready", **kb_health)
+        if kb_health.get("document_count", 0) == 0:
+            log.warning(
+                "knowledge_base_empty",
+                hint="Run: python scripts/seed_knowledge.py --reset",
+            )
+    except Exception as exc:
+        log.error(
+            "knowledge_retriever_init_failed",
+            error=str(exc),
+            hint="API will start but RAG will use fallback guidelines.",
+        )
+        _retriever = None
+
+    # Build pipeline — inject retriever into ResearchAgent
+    research_agent = ResearchAgent(vector_store=_retriever)
+    _pipeline = HealthcareTriageGraph(research=research_agent)
     _pipeline.export_mermaid()   # write graph diagram to docs/
     log.info("pipeline_ready")
 
@@ -184,6 +207,28 @@ async def health_llm(current_user: TokenData = Depends(get_current_user)):
 
 
 # ── Metrics ──────────────────────────────────────────────────────────────────
+
+@app.get("/health/knowledge", tags=["System"])
+async def health_knowledge():
+    """
+    Knowledge base health check — returns document count, embedding model,
+    and a sample retrieval to verify the vector store is seeded and responsive.
+
+    If document_count is 0, run: python scripts/seed_knowledge.py --reset
+    """
+    if _retriever is None:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unavailable",
+                "error": "KnowledgeRetriever failed to initialise. Check startup logs.",
+                "hint": "Run: python scripts/seed_knowledge.py --reset",
+            },
+        )
+    result = _retriever.health_check()
+    status_code = 200 if result.get("status") == "ok" else 503
+    return JSONResponse(content=result, status_code=status_code)
+
 
 @app.get("/metrics", tags=["System"])
 async def metrics():

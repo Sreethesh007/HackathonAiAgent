@@ -75,7 +75,7 @@ class ResearchAgent:
     """Retrieves and summarises clinical guidelines relevant to the triage outcome."""
 
     def __init__(self, llm: BaseChatModel | None = None, vector_store=None) -> None:
-        self.llm = llm or get_llm(temperature=0.1, max_tokens=768)
+        self.llm = llm or get_llm(temperature=0.1, max_tokens=1024)
         self.vector_store = vector_store
         self.name = AgentName.RESEARCH
 
@@ -144,7 +144,9 @@ class ResearchAgent:
             results = self.vector_store.similarity_search(query, k=5)
             return [
                 {
-                    "content": doc.page_content[:500],
+                    # Cap at 300 chars per doc so the combined prompt stays well within
+                    # the LLM's context budget, leaving enough room for the JSON output.
+                    "content": doc.page_content[:300],
                     "title": doc.metadata.get("title", "Clinical Guideline"),
                     "source": doc.metadata.get("source", "Medical Knowledge Base"),
                 }
