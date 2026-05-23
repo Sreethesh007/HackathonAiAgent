@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import time
+from src.utils import extract_json
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -41,7 +42,9 @@ Output a JSON object with EXACTLY these keys:
 }
 
 CRITICAL: selected_slot_id must exactly match one of the provided slot IDs.
-Respond ONLY with valid JSON."""
+Your response must start with { and end with }. 
+Output raw JSON only. No greetings, no explanations, no markdown, no code blocks.
+First character of your response must be {."""
 
 
 class SchedulerAgent:
@@ -164,7 +167,9 @@ Approval criteria:
   - response is complete (all needed steps ran)                     (+0.10)
 
 CRITICAL: If severity >= 8 but urgency_level != "emergency" → always flag as safety issue.
-Respond ONLY with valid JSON."""
+Your response must start with { and end with }. 
+Output raw JSON only. No greetings, no explanations, no markdown, no code blocks.
+First character of your response must be {."""
 
 
 class CriticAgent:
@@ -246,7 +251,7 @@ class CriticAgent:
             HumanMessage(content=summary),
         ])
 
-        data = json.loads(response.content.strip())
+        data = extract_json(response.content.strip())
         score = float(data.get("quality_score", 0.0))
         approved = score >= self.threshold and not data.get("requires_human_review", False)
 

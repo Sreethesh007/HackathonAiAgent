@@ -17,6 +17,7 @@ All decisions are appended to state.reasoning_trace for full auditability.
 from __future__ import annotations
 
 import time
+from src.utils import extract_json
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -117,7 +118,7 @@ class OrchestratorAgent:
                     getattr(um, "output_tokens", 0)
                 )
 
-            decision = json.loads(raw)
+            decision = extract_json(raw)
             state = self._apply_decision(state, decision)
             AGENT_CALLS.labels(agent="orchestrator", status="success").inc()
 

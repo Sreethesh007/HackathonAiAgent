@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import time
+from src.utils import extract_json
 from functools import lru_cache
 
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -42,7 +43,9 @@ Output a JSON object with EXACTLY these keys:
   "key_actions": ["<action 1>", "<action 2>", "<action 3>"]
 }
 
-CRITICAL: Respond ONLY with valid JSON.
+CRITICAL: Your response must start with { and end with }. 
+Output raw JSON only. No greetings, no explanations, no markdown, no code blocks.
+First character of your response must be {
 IMPORTANT: This is informational only — not a diagnosis or prescription."""
 
 # Built-in fallback guidelines (used when vector store is empty)
@@ -196,7 +199,7 @@ class ResearchAgent:
             LLM_TOKENS_USED.labels(agent="research", token_type="input").inc(getattr(um, "input_tokens", 0))
             LLM_TOKENS_USED.labels(agent="research", token_type="output").inc(getattr(um, "output_tokens", 0))
 
-        data = json.loads(response.content.strip())
+        data = extract_json(response.content.strip())
         return ResearchResult(
             summary=data.get("summary", ""),
             guidelines_applied=data.get("guidelines_applied", []),

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import time
+from src.utils import extract_json
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -57,7 +58,9 @@ Output a JSON object with EXACTLY these keys:
   "reasoning": "<your clinical reasoning in 2-3 sentences>"
 }
 
-CRITICAL: Respond ONLY with valid JSON — no markdown, no prose outside the JSON.
+CRITICAL: Respond ONLY with valid JSON — no markdown, no prose outside the JSON. Your response must start with { and end with }. 
+Output raw JSON only. No greetings, no explanations, no markdown, no code blocks.
+First character of your response must be {
 IMPORTANT: You are NOT diagnosing. You are triaging. Use conservative (higher) severity estimates when uncertain."""
 
 
@@ -153,13 +156,19 @@ class TriageAgent:
             LLM_TOKENS_USED.labels(agent="triage", token_type="input").inc(getattr(um, "input_tokens", 0))
             LLM_TOKENS_USED.labels(agent="triage", token_type="output").inc(getattr(um, "output_tokens", 0))
 
-        raw = response.content.strip()
-        data = json.loads(raw)
+        data = extract_json(response.content.strip())
+
+        # Sanitise ABCDE — replace None values with "unknown"
+        abcde_raw = data.get("abcde_assessment", {}) or {}
+        abcde_clean = {
+            k: (v if isinstance(v, str) else "unknown")
+            for k, v in abcde_raw.items()
+        }
 
         return TriageResult(
             severity_score=int(data.get("severity_score", 5)),
             urgency_level=UrgencyLevel(data.get("urgency_level", "urgent")),
             primary_concern=data.get("primary_concern", ""),
-            abcde_assessment=data.get("abcde_assessment", {}),
+            abcde_assessment=abcde_clean,
             reasoning=data.get("reasoning", ""),
         )

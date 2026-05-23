@@ -211,14 +211,10 @@ def _build_llamacpp(
     )
 
     return ChatOpenAI(
-        model=settings.llamacpp_model,
-        base_url=base_url,
-        api_key="not-needed",              # llama.cpp server needs no auth
-        max_tokens=max_tokens,
-        temperature=temperature,
-        streaming=streaming,
-        # Pass llama.cpp-specific params through model_kwargs
-        model_kwargs={
-            "n_ctx":        settings.llamacpp_n_ctx,
-        },
-    )
+    model=settings.llamacpp_model,
+    base_url=base_url,
+    api_key="not-needed",
+    max_tokens=max_tokens,
+    temperature=temperature,
+    streaming=streaming,
+)
