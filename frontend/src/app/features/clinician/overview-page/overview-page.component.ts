@@ -5,11 +5,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { TriageApiService } from '../../../core/services/triage-api.service';
 import { ChartCardComponent } from '../../../shared/components/chart-card/chart-card.component';
 import { ChartData, ChartOptions } from 'chart.js';
+import { FadeInDirective } from '../../../shared/directives/fade-in.directive';
 
 @Component({
   selector: 'app-overview-page',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, ChartCardComponent],
+  imports: [CommonModule, MatCardModule, MatIconModule, ChartCardComponent, FadeInDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page-container">
@@ -19,9 +20,9 @@ import { ChartData, ChartOptions } from 'chart.js';
       </div>
 
       <div class="stat-grid">
-        <mat-card class="stat-card" *ngFor="let s of stats">
+        <mat-card class="stat-card u-hover-lift" *ngFor="let s of stats" appFadeIn tabindex="0" [attr.aria-label]="s.label + ' ' + s.value">
           <mat-card-content class="stat-body">
-            <mat-icon [style.color]="s.color" class="stat-icon">{{ s.icon }}</mat-icon>
+            <mat-icon [style.color]="s.color" class="stat-icon" aria-hidden="true">{{ s.icon }}</mat-icon>
             <div>
               <div class="stat-val">{{ s.value }}</div>
               <div class="stat-lbl">{{ s.label }}</div>
@@ -31,11 +32,11 @@ import { ChartData, ChartOptions } from 'chart.js';
       </div>
 
       <div class="chart-grid">
-        <app-chart-card title="Urgency Distribution" icon="donut_large"
-          type="doughnut" [data]="urgencyData" [options]="doughnutOpts">
+        <app-chart-card class="u-hover-lift" appFadeIn title="Urgency Distribution" icon="donut_large"
+          type="doughnut" [data]="urgencyData" [options]="doughnutOpts" tabindex="0" aria-label="Urgency Distribution Chart">
         </app-chart-card>
-        <app-chart-card title="Agent Latency (ms)" subtitle="Average per agent" icon="monitor_heart"
-          type="bar" [data]="latencyData" [options]="barOpts">
+        <app-chart-card class="u-hover-lift" appFadeIn title="Agent Latency (ms)" subtitle="Average per agent" icon="monitor_heart"
+          type="bar" [data]="latencyData" [options]="barOpts" tabindex="0" aria-label="Agent Latency Chart">
         </app-chart-card>
       </div>
     </div>

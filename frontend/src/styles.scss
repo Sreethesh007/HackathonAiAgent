@@ -1,5 +1,7 @@
 // ── Angular Material M3 Theme ─────────────────────────────────────────────────
 @use '@angular/material' as mat;
+@import 'styles/mixins';
+@import 'styles/utilities';
 
 // Design Tokens
 :root {
@@ -180,4 +182,10 @@ a { color: var(--color-primary); text-decoration: none; }
   background: rgba(20,184,166,0.12) !important;
   .mdc-list-item__primary-text { color: var(--color-accent) !important; }
   mat-icon { color: var(--color-accent) !important; }
+}
+
+// ── Accessibility ────────────────────────────────────────────────────────────
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
