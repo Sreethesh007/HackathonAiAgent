@@ -28,6 +28,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from src.api.auth import get_current_user, TokenData
+from src.api.login import router as auth_router
 from src.api.schemas import (
     ContinueRequest,
     ContinueResponse,
@@ -131,6 +132,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Auth router (login endpoint for Angular frontend) ─────────────────────────
+app.include_router(auth_router)
 
 
 # ── Request ID + latency middleware ──────────────────────────────────────────

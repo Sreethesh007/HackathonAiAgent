@@ -14,6 +14,21 @@ version: "3.9"
 
 services:
 
+  # ── Angular Frontend (Nginx) ─────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: triage-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - triage-net
+
   # ── Triage Agent API ────────────────────────────────────────────────────────
   app:
     build:

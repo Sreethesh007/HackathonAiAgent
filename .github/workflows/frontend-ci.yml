@@ -1,0 +1,51 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ['frontend/**']
+  pull_request:
+    branches: [main]
+    paths: ['frontend/**']
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npx ng test --watch=false --browsers=ChromeHeadless
+
+      - name: Production build
+        run: npx ng build --configuration production
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t healthcare-triage-frontend:${{ github.sha }} \
+            -t healthcare-triage-frontend:latest \
+            .
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 7
