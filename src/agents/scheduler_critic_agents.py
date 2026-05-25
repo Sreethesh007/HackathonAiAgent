@@ -192,7 +192,18 @@ class CriticAgent:
             state.requires_human_review = result.requires_human_review
 
             if result.approved:
-                state.add_trace(f"CRITIC: Approved (score={result.quality_score:.2f})")
+                # Offer appointment only for moderate cases (severity 3-7)
+                # - Emergency (>=8): patient needs 911, not a scheduled visit
+                # - Trivial (<3): no follow-up care needed
+                # - Routine/urgent mid-range: appointment is appropriate
+                severity = state.triage.severity_score
+                urgency = str(state.triage.urgency_level).lower()
+                is_moderate = 3 <= severity <= 7 and "emergency" not in urgency
+                if is_moderate and not state.appointment.booked:
+                    state.offer_appointment = True
+                else:
+                    state.offer_appointment = False
+                state.add_trace(f"CRITIC: Approved (score={result.quality_score:.2f}), offer_appointment={state.offer_appointment}")
             else:
                 state.add_trace(
                     f"CRITIC: NOT approved (score={result.quality_score:.2f}), "

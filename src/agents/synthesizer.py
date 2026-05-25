@@ -36,6 +36,7 @@ Guidelines:
 - For emergencies (severity >= 8): open with urgent call-to-action, be direct
 - For urgent cases: explain timeline clearly, provide next steps
 - For routine cases: reassure, explain scheduling, add general wellness tips
+- If `offer_appointment` is true, explicitly ask the user if they would like you to book an appointment for them, or if they have any specific time preferences.
 - Always end with: "If your symptoms worsen suddenly, seek emergency care immediately."
 - Keep response under 250 words
 
@@ -97,6 +98,7 @@ class Synthesizer:
             "clinical_recommendation": state.research.summary,
             "key_guidelines": state.research.guidelines_applied[:3],
             "appointment": appt_section or "not_booked",
+            "offer_appointment": getattr(state, "offer_appointment", False),
             "requires_human_review": state.requires_human_review,
             "human_approved": state.human_approved,
             "quality_score": state.critic.quality_score,

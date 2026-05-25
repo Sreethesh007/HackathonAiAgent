@@ -142,6 +142,7 @@ class AgentState(BaseModel):
     # Human-in-the-loop
     requires_human_review: bool = False
     human_approved: bool | None = None  # None = not yet decided
+    offer_appointment: bool = False
 
     # Reasoning trace (populated by orchestrator — useful for debugging)
     reasoning_trace: list[str] = Field(default_factory=list)

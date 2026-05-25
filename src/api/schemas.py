@@ -6,12 +6,12 @@ from pydantic import BaseModel, Field
 
 
 class TriageRequest(BaseModel):
-    patient_id: str = Field(..., min_length=1, max_length=64, description="Unique patient identifier")
+    patient_id: str | None = Field(None, description="Unique patient identifier (optional, auto-derived from token if missing)")
     message: str = Field(..., min_length=5, max_length=2000, description="Patient's symptom description")
     session_id: str | None = Field(None, description="Reuse existing session for follow-up")
 
     model_config = {"json_schema_extra": {
-        "examples": [{"patient_id": "P12345", "message": "I have severe chest pain radiating to my left arm"}]
+        "examples": [{"message": "I have severe chest pain radiating to my left arm"}]
     }}
 
 

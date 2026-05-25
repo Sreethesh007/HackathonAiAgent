@@ -17,15 +17,66 @@ export class TriageApiService {
     return this.http.post<TriageResponse>(`${this.base}/triage`, req);
   }
 
+  streamTriage(req: TriageRequest): Observable<any> {
+    return this.createFetchStream(`${this.base}/triage`, req);
+  }
+
   continueTriage(sessionId: string, req: ContinueRequest): Observable<ContinueResponse> {
     return this.http.post<ContinueResponse>(`${this.base}/triage/${sessionId}/continue`, req);
+  }
+
+  streamContinue(sessionId: string, req: ContinueRequest): Observable<any> {
+    return this.createFetchStream(`${this.base}/triage/${sessionId}/continue`, req);
   }
 
   getSessionStatus(sessionId: string): Observable<SessionStatusResponse> {
     return this.http.get<SessionStatusResponse>(`${this.base}/triage/${sessionId}/status`);
   }
 
+  getSessions(): Observable<{sessions: any[]}> {
+    return this.http.get<{sessions: any[]}>(`${this.base}/sessions`);
+  }
+
+  getPendingReviews(): Observable<{sessions: SessionStatusResponse[]}> {
+    return this.http.get<{sessions: SessionStatusResponse[]}>(`${this.base}/clinician/pending`);
+  }
+
   healthCheck(): Observable<HealthResponse> {
     return this.http.get<HealthResponse>(`${this.base}/health`);
+  }
+
+  private createFetchStream(url: string, body: any): Observable<any> {
+    return new Observable(observer => {
+      const token = localStorage.getItem('hta_token');
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(body)
+      }).then(async response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.body) throw new Error('No body');
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                observer.next(JSON.parse(line.substring(6)));
+              } catch (e) {}
+            }
+          }
+        }
+        observer.complete();
+      }).catch(err => observer.error(err));
+    });
   }
 }
