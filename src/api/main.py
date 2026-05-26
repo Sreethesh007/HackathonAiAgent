@@ -202,6 +202,7 @@ async def event_generator(pipeline_iterator, patient_id: str, session_id: str):
 
     # Always emit a metadata event so the frontend can clear "AI is thinking"
     # and update session flags, even if we never captured a full state dict.
+    triage_state = final_state.get("triage", {}) if final_state else {}
     meta = {
         "type": "metadata",
         "offer_appointment": False,
@@ -209,6 +210,9 @@ async def event_generator(pipeline_iterator, patient_id: str, session_id: str):
         "requires_human_review": False,
         "session_id": session_id,
         "flow_status": "completed",
+        "triage_severity": None,
+        "triage_urgency": None,
+        "triage_concern": None,
     }
     if final_state:
         meta.update({
@@ -216,6 +220,9 @@ async def event_generator(pipeline_iterator, patient_id: str, session_id: str):
             "appointment_booked": final_state.get("appointment", {}).get("booked", False),
             "requires_human_review": final_state.get("requires_human_review", False),
             "flow_status": final_state.get("flow_status", "completed"),
+            "triage_severity": triage_state.get("severity_score") or triage_state.get("severity"),
+            "triage_urgency": triage_state.get("urgency_level") or triage_state.get("urgency"),
+            "triage_concern": triage_state.get("primary_concern") or triage_state.get("concern"),
         })
 
         # Update in-memory session history
