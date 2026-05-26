@@ -103,7 +103,7 @@ def symptom_lookup(symptom: str) -> dict[str, Any]:
 
 def _first_aid_tip(urgency: str) -> str:
     tips = {
-        "emergency": "Call 911 or go to the nearest emergency room immediately.",
+        "emergency": "Call 112 or go to the nearest emergency room immediately.",
         "urgent": "Seek medical attention within the next few hours.",
         "routine": "Schedule an appointment with your primary care physician.",
         "unknown": "Monitor symptoms and consult a healthcare provider if they worsen.",

@@ -52,9 +52,9 @@ IMPORTANT: This is informational only — not a diagnosis or prescription."""
 FALLBACK_GUIDELINES: dict[str, dict] = {
     "emergency": {
         "summary": "Based on emergency triage protocols, immediate medical attention is required. "
-                   "Call emergency services (911) or proceed to the nearest emergency department.",
+                   "Call emergency services (112) or proceed to the nearest emergency department.",
         "guidelines": ["WHO Emergency Triage Guidelines", "ATLS Protocol"],
-        "key_actions": ["Call 911 immediately", "Do not drive yourself", "Stay calm and keep patient still"],
+        "key_actions": ["call 112 immediately", "Do not drive yourself", "Stay calm and keep patient still"],
     },
     "urgent": {
         "summary": "Your symptoms require prompt medical evaluation within the next few hours. "

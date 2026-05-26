@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 # ---------------------------------------------------------------------------
 
 class UrgencyLevel(str, Enum):
-    EMERGENCY = "emergency"   # Call 911 / go to ER immediately
+    EMERGENCY = "emergency"   # Call 112 / go to ER immediately
     URGENT    = "urgent"      # See a doctor within 24 hours
     ROUTINE   = "routine"     # Schedule a regular appointment
     UNKNOWN   = "unknown"     # Not yet assessed

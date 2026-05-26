@@ -42,7 +42,7 @@ BUILTIN_DOCUMENTS = [
             "chin-lift if unconscious. Breathing — look listen feel, administer O2 if SpO2 < 94%. "
             "Circulation — control severe bleeding with direct pressure, check pulse rate and quality. "
             "Disability — assess GCS, pupil response, blood glucose. Exposure — remove clothing to "
-            "identify hidden injuries, prevent hypothermia. Immediate life threats requiring 911: "
+            "identify hidden injuries, prevent hypothermia. Immediate life threats requiring 112: "
             "cardiac arrest, respiratory failure, uncontrolled haemorrhage, anaphylaxis, stroke, "
             "major trauma, status epilepticus, eclampsia. Time-critical: every minute without "
             "treatment worsens outcome in cardiac and stroke emergencies."
@@ -58,7 +58,7 @@ BUILTIN_DOCUMENTS = [
             "left arm, jaw, neck, or back, diaphoresis (sweating), nausea, vomiting, shortness of "
             "breath, palpitations, sense of impending doom. Atypical presentation in women and "
             "diabetics: fatigue, indigestion, back pain without chest pain. "
-            "Pre-hospital actions: call 911 immediately, chew 300–325 mg aspirin (not swallow) "
+            "Pre-hospital actions: call 112 immediately, chew 300–325 mg aspirin (not swallow) "
             "unless allergic, rest in semi-recumbent position, unlock front door for paramedics, "
             "do not eat or drink, do not drive yourself. Time is muscle — every 10-minute delay "
             "in reperfusion causes irreversible myocardial damage. Target door-to-balloon < 90 min."
@@ -70,14 +70,14 @@ BUILTIN_DOCUMENTS = [
         "category": "emergency",
         "content": (
             "Stroke FAST-BE assessment: Face drooping or asymmetry, Arm weakness or drift, "
-            "Speech slurred or confused, Time to call 911, Balance disturbance, Eye vision changes "
+            "Speech slurred or confused, Time to call 112, Balance disturbance, Eye vision changes "
             "(sudden blurred or double vision, or loss of vision one eye). "
             "Additional warning signs: sudden severe headache ('worst headache of my life') "
             "suggesting subarachnoid haemorrhage, sudden dizziness, loss of coordination. "
             "Ischaemic stroke (87%): clot blocking cerebral artery — thrombolysis (tPA) within "
             "4.5 hours of onset, thrombectomy within 24 hours if eligible. "
             "Haemorrhagic stroke (13%): blood vessel rupture — lower BP, reverse anticoagulation. "
-            "Action: call 911 now, note exact time of symptom onset, do not give aspirin until "
+            "Action: call 112 now, note exact time of symptom onset, do not give aspirin until "
             "CT scan excludes haemorrhagic stroke. Brain tissue loss: 1.9 million neurons/minute "
             "without treatment. Do not let patient sleep off symptoms."
         ),
@@ -94,7 +94,7 @@ BUILTIN_DOCUMENTS = [
             "bronchospasm, hypotension, tachycardia, dizziness, loss of consciousness, vomiting. "
             "Biphasic reaction: symptoms may recur 1–72 hours after initial episode. "
             "Treatment: epinephrine (adrenaline) 0.3–0.5 mg IM (outer mid-thigh) immediately — "
-            "this is first-line, not antihistamines. Call 911. Lay patient flat with legs elevated "
+            "this is first-line, not antihistamines. Call 112. Lay patient flat with legs elevated "
             "(unless respiratory distress — then sit up). Repeat epinephrine after 5 minutes if "
             "no improvement. Observe minimum 4–6 hours post-reaction even if resolved."
         ),
@@ -109,10 +109,10 @@ BUILTIN_DOCUMENTS = [
             "Moderate asthma: SpO2 >= 92%, PEF 33–50%, able to complete sentences. "
             "Differential diagnosis for acute breathlessness: asthma, COPD exacerbation, "
             "pulmonary embolism (PE), pneumothorax, pneumonia, cardiac failure, foreign body. "
-            "Red flags requiring 911: respiratory rate > 30/min, SpO2 < 90% on air, accessory "
+            "Red flags requiring 112: respiratory rate > 30/min, SpO2 < 90% on air, accessory "
             "muscle use, inability to speak in full sentences, altered consciousness. "
             "Pre-hospital: sit patient upright, give salbutamol 2.5–5 mg nebulised or 4–10 puffs "
-            "via spacer every 20 min, supplemental O2 to target SpO2 94–98%, call 911 immediately "
+            "via spacer every 20 min, supplemental O2 to target SpO2 94–98%, call 112 immediately "
             "for severe or life-threatening features."
         ),
     },
@@ -131,7 +131,7 @@ BUILTIN_DOCUMENTS = [
             "Symptoms: fever > 38.3°C or hypothermia < 36°C, rigors (shaking chills), rapid heart "
             "rate, rapid breathing, confusion, extreme fatigue, mottled skin. "
             "The Sepsis Six (first hour): high-flow O2, blood cultures x2, IV antibiotics, IV fluids "
-            "500 mL bolus, measure lactate, monitor urine output. Call 911 immediately."
+            "500 mL bolus, measure lactate, monitor urine output. call 112 immediately."
         ),
     },
 
@@ -141,7 +141,7 @@ BUILTIN_DOCUMENTS = [
         "title": "Headache Assessment — Red Flags and Triage Protocol",
         "category": "urgent",
         "content": (
-            "Headache red flags requiring immediate emergency evaluation (call 911 or go to ER): "
+            "Headache red flags requiring immediate emergency evaluation (call 112 or go to ER): "
             "thunderclap headache — sudden onset, worst headache of life (subarachnoid haemorrhage "
             "until proven otherwise), fever + stiff neck + photophobia (bacterial meningitis), "
             "new headache after age 50 (giant cell arteritis, space-occupying lesion), "
@@ -161,7 +161,7 @@ BUILTIN_DOCUMENTS = [
         "content": (
             "Fever definitions: low-grade 37.3–38°C, moderate 38–39°C, high 39–40°C, "
             "hyperpyrexia > 40°C (medical emergency). "
-            "Emergency (call 911): temperature > 40°C, infant < 3 months any fever, "
+            "Emergency (call 112): temperature > 40°C, infant < 3 months any fever, "
             "fever + stiff neck + non-blanching rash (meningococcal septicaemia — glass test), "
             "fever + confusion or altered consciousness, fever + difficulty breathing, "
             "fever + severe headache + photophobia. "
@@ -217,7 +217,7 @@ BUILTIN_DOCUMENTS = [
             "High-risk features: specific plan and means available, previous attempt (strongest predictor), "
             "recent significant loss, social isolation, substance misuse, male gender over 45, "
             "access to lethal means (firearms, medications), stating goodbye, giving possessions away. "
-            "Immediate action (high risk): call 911 or take to emergency department, do not leave "
+            "Immediate action (high risk): call 112 or take to emergency department, do not leave "
             "person alone, remove access to means if safe to do so, involve trusted person. "
             "Urgent (lower risk with protective factors): same-day mental health crisis line, "
             "emergency GP appointment, crisis team referral. "
@@ -238,7 +238,7 @@ BUILTIN_DOCUMENTS = [
             "Mild-moderate (conscious and able to swallow): 15–20 g fast-acting carbohydrate — "
             "150–200 mL fruit juice, 5–7 glucose tablets, 4–5 jelly babies. Recheck glucose 15 min. "
             "Repeat if still < 4 mmol/L. Follow with long-acting carbohydrate snack. "
-            "Severe (impaired consciousness, unable to swallow): call 911, IM glucagon 1 mg "
+            "Severe (impaired consciousness, unable to swallow): call 112, IM glucagon 1 mg "
             "(if available and trained), place recovery position, IV 10% glucose if in hospital. "
             "Hyperglycaemic emergencies: DKA (type 1, ketones > 3, pH < 7.3) and HHS "
             "(type 2, glucose > 30, osmolality > 320) both require hospital admission and IV fluids."
@@ -350,7 +350,7 @@ BUILTIN_DOCUMENTS = [
         "content": (
             "Triage severity scale 0–10: "
             "EMERGENCY (8–10) — cardiac arrest, stroke, anaphylaxis, major haemorrhage, respiratory "
-            "failure, major trauma, status epilepticus, septic shock, eclampsia — call 911 immediately. "
+            "failure, major trauma, status epilepticus, septic shock, eclampsia — call 112 immediately. "
             "URGENT (5–7) — high fever, severe uncontrolled pain, suspected fracture, suspected "
             "appendicitis, acute mental health crisis, DKA, pyelonephritis, worsening chronic disease — "
             "seek care within 2–4 hours at urgent care or A&E. "

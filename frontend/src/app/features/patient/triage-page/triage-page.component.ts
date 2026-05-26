@@ -20,13 +20,13 @@ interface ChatMessage {
 }
 
 const NODE_META: Record<string, { label: string; icon: string }> = {
-  orchestrator:  { label: 'Planning',              icon: 'hub' },
-  triage:        { label: 'Assessing Symptoms',    icon: 'monitor_heart' },
-  research:      { label: 'Researching Guidelines',icon: 'find_in_page' },
-  scheduler:     { label: 'Booking Appointment',   icon: 'calendar_month' },
-  critic:        { label: 'Quality Review',        icon: 'verified' },
-  human_review:  { label: 'Human Review',          icon: 'person_search' },
-  synthesizer:   { label: 'Composing Reply',       icon: 'edit_note' },
+  orchestrator: { label: 'Planning', icon: 'hub' },
+  triage: { label: 'Assessing Symptoms', icon: 'monitor_heart' },
+  research: { label: 'Researching Guidelines', icon: 'find_in_page' },
+  scheduler: { label: 'Booking Appointment', icon: 'calendar_month' },
+  critic: { label: 'Quality Review', icon: 'verified' },
+  human_review: { label: 'Human Review', icon: 'person_search' },
+  synthesizer: { label: 'Composing Reply', icon: 'edit_note' },
 };
 
 @Component({
@@ -288,7 +288,7 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
             </button>
           </div>
           <div class="disclaimer">
-            This AI is for informational purposes only. In an emergency, call 911 immediately.
+            This AI is for informational purposes only. In an emergency, call 112 immediately.
           </div>
         </div>
       </main>
@@ -955,7 +955,7 @@ export class TriagePageComponent implements OnInit {
     private notify: NotificationService,
     public auth: AuthService,
     private cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   ngOnInit() { this.fetchSessions(); }
 
@@ -967,9 +967,9 @@ export class TriagePageComponent implements OnInit {
 
   fetchSessions() {
     this.api.getSessions().subscribe({
-      next: (res) => {
+      next: (res: any) => {
         this.sessions = res.sessions || [];
-        this.sessions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        this.sessions.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         this.cdr.markForCheck();
       }
     });
@@ -1103,16 +1103,20 @@ export class TriagePageComponent implements OnInit {
     if (typeof raw === 'string') {
       const s = raw.trim();
       if (!s) return '';
-      if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) {
+
+      // If it looks like JSON (even if incomplete during streaming), attempt to parse.
+      if (s.startsWith('{') || s.startsWith('[')) {
         try {
           const parsed = JSON.parse(s);
           if (parsed && typeof parsed === 'object') {
             return this.formatStructuredReasoning(parsed);
           }
         } catch (e) {
-          // not json, fall through
+          // Incomplete JSON during streaming; hide it until fully valid.
+          return '';
         }
       }
+
       // Convert common separator patterns into newlines for better readability.
       return s.replace(/\s*·\s*/g, '\n').replace(/\s*—\s*/g, '\n');
     }
@@ -1248,7 +1252,7 @@ export class TriagePageComponent implements OnInit {
     setTimeout(() => {
       try {
         this.chatScroll.nativeElement.scrollTop = this.chatScroll.nativeElement.scrollHeight;
-      } catch(err) {}
+      } catch (err) { }
     }, 50);
   }
 }

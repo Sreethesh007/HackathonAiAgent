@@ -131,7 +131,7 @@ Content-Type: application/json
 ```json
 {
   "session_id": "550e8400-e29b-41d4-a716-446655440000",
-  "response": "⚠️ Based on your symptoms, please call 911 immediately...",
+  "response": "⚠️ Based on your symptoms, please call 112 immediately...",
   "severity_score": 9,
   "urgency_level": "emergency",
   "primary_concern": "chest pain",
@@ -188,7 +188,7 @@ python examples/scenarios.py
 
 **Scenario 1 — Emergency Cardiac Event**
 > "I have severe chest pain radiating to my left arm and jaw..."
-→ Emergency (score 9) → No appointment booked → "Call 911 immediately"
+→ Emergency (score 9) → No appointment booked → "call 112 immediately"
 
 **Scenario 2 — Routine Follow-up**
 > "I need to schedule a blood pressure check, everything seems stable..."
