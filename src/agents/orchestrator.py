@@ -36,9 +36,9 @@ ORCHESTRATOR_SYSTEM_PROMPT = """You are a medical triage orchestrator AI. Your j
 
 1. Understand the patient's situation from their message.
 2. Decompose the situation into an ordered list of subtasks chosen from:
-   - assess_urgency    → call TriageAgent  (ALWAYS do this first)
+   - assess_urgency    → call TriageAgent  (ALWAYS do this first for new symptoms)
    - find_guidelines   → call ResearchAgent (do after triage)
-   - schedule_care     → call SchedulerAgent (only if appointment needed)
+   - schedule_care     → call SchedulerAgent (only if appointment needed or requested by the user)
 3. Decide which specialist agent to route to NEXT based on what has already been done.
 4. Signal FINISH when all necessary subtasks are complete.
 

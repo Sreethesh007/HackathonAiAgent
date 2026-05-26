@@ -58,7 +58,7 @@ def get_llm(
     *,
     temperature: float | None = None,
     max_tokens: int | None = None,
-    streaming: bool = False,
+    streaming: bool = True,
 ) -> BaseChatModel:
     """
     Return the active LLM as a LangChain BaseChatModel.

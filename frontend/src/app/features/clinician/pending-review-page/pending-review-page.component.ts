@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatBadgeModule } from '@angular/material/badge';
 import { trigger, transition, style, animate, query } from '@angular/animations';
-import { interval, Subscription, startWith, switchMap, of } from 'rxjs';
+import { interval, Subscription, startWith, switchMap } from 'rxjs';
 import { TriageApiService } from '../../../core/services/triage-api.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { SeverityBadgeComponent } from '../../../shared/components/severity-badge/severity-badge.component';
@@ -53,7 +53,7 @@ import { SessionStatusResponse } from '../../../core/models/triage.models';
             <mat-card-subtitle>{{ s.flow_status }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <app-severity-badge [level]="s.urgency_level" [score]="s.severity_score"></app-severity-badge>
+            <app-severity-badge [level]="s.urgency_level || 'unknown'" [score]="s.severity_score ?? null"></app-severity-badge>
             <p class="meta"><mat-icon inline>repeat</mat-icon> {{ s.iteration_count }} iterations</p>
           </mat-card-content>
           <mat-card-actions class="actions">
@@ -95,11 +95,21 @@ export class PendingReviewPageComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Poll every 10s — in production, call GET /sessions?requires_human_review=true
+    // Poll every 10s — calls GET /clinician/pending
     this.sub = interval(10000).pipe(
       startWith(0),
-      switchMap(() => of([] as SessionStatusResponse[]))
-    ).subscribe(s => { this.sessions = s; this.cdr.markForCheck(); });
+      switchMap(() => this.api.getPendingReviews())
+    ).subscribe({
+      next: (res) => {
+        this.sessions = res.sessions || [];
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        // Silently fail on polling errors (auth may not be set up for clinician role)
+        this.sessions = [];
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   approve(id: string): void { this.decide(id, true); }
