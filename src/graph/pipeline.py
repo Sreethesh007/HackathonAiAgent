@@ -144,10 +144,7 @@ class HealthcareTriageGraph:
         if state.requires_human_review:
             return "human_review"
         if state.critic.approved:
-            # Only book appointment for non-emergency cases
-            urgency = str(state.triage.urgency_level).lower()
-            if "emergency" not in urgency and not state.appointment.booked:
-                return "scheduler"
+            # We no longer route to scheduler automatically; synthesizer handles prompting.
             return "synthesizer"
         # Not approved, not human review → retry via orchestrator (if iterations allow)
         if not state.is_exhausted():
@@ -272,6 +269,53 @@ class HealthcareTriageGraph:
         self._graph.update_state(config, _state_to_dict(state))
         result_dict = self._graph.invoke(None, config=config)   # None = resume from checkpoint
         return _dict_to_state(result_dict)
+
+    async def astream_run(
+        self,
+        patient_id: str,
+        message: str,
+        session_id: str | None = None,
+        max_iterations: int | None = None,
+    ):
+        """Async generator for streaming LLM tokens and metadata."""
+        import uuid
+
+        initial_state = AgentState(
+            patient_id=patient_id,
+            current_input=message,
+            max_iterations=max_iterations or settings.max_agent_iterations,
+        )
+        if session_id:
+            initial_state.session_id = session_id
+        else:
+            session_id = initial_state.session_id
+
+        initial_state.add_message("user", message)
+        log.info(
+            "pipeline_astream_start",
+            session_id=session_id,
+            patient_id=patient_id,
+        )
+
+        config = {"configurable": {"thread_id": session_id}}
+        
+        async for event in self._graph.astream_events(_state_to_dict(initial_state), config=config, version="v2"):
+            yield event
+
+    async def astream_resume(self, session_id: str, human_approved: bool):
+        """Resume a HITL-paused session via stream."""
+        config = {"configurable": {"thread_id": session_id}}
+
+        current = self._graph.get_state(config)
+        if current is None:
+            raise ValueError(f"No paused session found for session_id={session_id}")
+
+        state = _dict_to_state(current.values)
+        state = self.human_review.resume(state, human_approved)
+        self._graph.update_state(config, _state_to_dict(state))
+
+        async for event in self._graph.astream_events(None, config=config, version="v2"):
+            yield event
 
     def export_mermaid(self, output_path: str = "docs/graph.md") -> None:
         """Export the graph as a Mermaid diagram to docs/graph.md."""

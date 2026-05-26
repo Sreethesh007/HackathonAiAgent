@@ -1,7 +1,7 @@
 // ── Angular Material M3 Theme ─────────────────────────────────────────────────
 @use '@angular/material' as mat;
-@import 'styles/mixins';
-@import 'styles/utilities';
+@use 'styles/mixins';
+@use 'styles/utilities';
 
 // Design Tokens
 :root {

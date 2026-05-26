@@ -21,7 +21,7 @@ from datetime import datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -54,6 +54,212 @@ log = get_logger(__name__)
 _pipeline: HealthcareTriageGraph | None = None
 _retriever: KnowledgeRetriever | None = None
 _start_time = time.time()
+_patient_sessions = __import__('collections').defaultdict(list)
+# Stores sessions awaiting clinician review: session_id -> SessionStatusResponse-like dict
+_pending_review_sessions: dict = {}
+
+# SSE Event Generator Helper
+def _extract_text_from_chunk(chunk_content) -> str:
+    """Extract plain text from LLM chunk content.
+    
+    Anthropic/Claude returns a list of content blocks like:
+        [{"type": "text", "text": "hello"}, ...]
+    OpenAI/others return a plain string.
+    This helper normalises both forms.
+    """
+    if isinstance(chunk_content, str):
+        return chunk_content
+    if isinstance(chunk_content, list):
+        parts = []
+        for block in chunk_content:
+            if isinstance(block, dict):
+                parts.append(block.get("text", ""))
+            elif isinstance(block, str):
+                parts.append(block)
+            else:
+                # AIMessageChunk sub-objects (e.g. TextBlock)
+                text = getattr(block, "text", None)
+                if text:
+                    parts.append(text)
+        return "".join(parts)
+    return ""
+
+
+def _extract_node_reasoning(node: str, state_dict: dict) -> str:
+    """Extract a human-readable reasoning string from an agent node's output state.
+
+    Non-streaming agents (triage, research, critic, scheduler) use llm.invoke(),
+    so their reasoning never appears in on_chat_model_stream. We pull it from the
+    state dict that is emitted in on_chain_end instead.
+    """
+    if node == "triage":
+        t = state_dict.get("triage", {})
+        if isinstance(t, dict):
+            parts = []
+            if t.get("reasoning"):
+                parts.append(t["reasoning"])
+            score = t.get("severity_score")
+            urgency = t.get("urgency_level")
+            concern = t.get("primary_concern")
+            if score and urgency:
+                parts.append(f"Severity: {score}/10 · Urgency: {urgency}")
+            if concern:
+                parts.append(f"Primary concern: {concern}")
+            return " — ".join(parts) if parts else ""
+
+    if node == "research":
+        r = state_dict.get("research", {})
+        if isinstance(r, dict):
+            summary = r.get("summary", "")
+            guidelines = r.get("guidelines_applied", [])
+            confidence = r.get("confidence_score", 0)
+            parts = []
+            if summary:
+                parts.append(summary[:400])
+            if guidelines:
+                parts.append(f"Guidelines applied: {', '.join(guidelines[:3])}")
+            if confidence:
+                parts.append(f"Confidence: {confidence:.0%}")
+            return " — ".join(parts) if parts else ""
+
+    if node == "critic":
+        c = state_dict.get("critic", {})
+        if isinstance(c, dict):
+            score = c.get("quality_score", 0)
+            approved = c.get("approved", False)
+            feedback = c.get("feedback", "")
+            issues = c.get("issues_found", [])
+            verdict = "✅ Approved" if approved else "⚠️ Needs review"
+            parts = [f"{verdict} (quality score: {score:.0%})"]
+            if feedback:
+                parts.append(feedback[:300])
+            if issues:
+                parts.append(f"Issues: {'; '.join(issues[:2])}")
+            return " — ".join(parts) if parts else ""
+
+    if node == "scheduler":
+        a = state_dict.get("appointment", {})
+        if isinstance(a, dict) and a.get("booked"):
+            provider = a.get("provider", "")
+            dt = a.get("datetime_iso", "")
+            appt_id = a.get("appointment_id", "")
+            return f"Appointment booked — {provider} on {dt} (ID: {appt_id})"
+        return "Appointment booking attempted but no slot confirmed."
+
+    return ""
+
+
+async def event_generator(pipeline_iterator, patient_id: str, session_id: str):
+    import json
+    final_state = None
+    try:
+        async for event in pipeline_iterator:
+            kind = event["event"]
+
+            # ── Notify frontend when a new agent node starts ───────────────
+            if kind == "on_chain_start":
+                node = event.get("metadata", {}).get("langgraph_node")
+                # Only emit for known specialist nodes (not internal chain wrappers)
+                KNOWN_NODES = {
+                    "orchestrator", "triage", "research",
+                    "scheduler", "critic", "human_review", "synthesizer"
+                }
+                if node and node in KNOWN_NODES:
+                    yield f"data: {json.dumps({'type': 'step_start', 'node': node})}\n\n"
+
+            # ── Stream LLM tokens ──────────────────────────────────────────
+            elif kind == "on_chat_model_stream":
+                node = event.get("metadata", {}).get("langgraph_node", "unknown")
+                raw_content = event["data"]["chunk"].content
+                chunk_text = _extract_text_from_chunk(raw_content)
+                if chunk_text:
+                    if node == "synthesizer":
+                        yield f"data: {json.dumps({'type': 'message', 'content': chunk_text})}\n\n"
+                    else:
+                        yield f"data: {json.dumps({'type': 'thinking', 'content': chunk_text, 'node': node})}\n\n"
+
+            # ── Capture final state + emit per-node reasoning ─────────────
+            elif kind in ("on_chain_end", "on_graph_end"):
+                node = event.get("metadata", {}).get("langgraph_node")
+                out = event["data"].get("output")
+
+                if isinstance(out, dict):
+                    # Capture the final graph state when flow_status is present
+                    if "flow_status" in out:
+                        final_state = out
+                        log.debug("pipeline_state_captured", event_name=event.get("name"))
+
+                    # Extract and emit per-agent reasoning for non-streaming agents.
+                    # These agents use llm.invoke() so no on_chat_model_stream fires.
+                    if node and node in {"triage", "research", "critic", "scheduler"}:
+                        reasoning = _extract_node_reasoning(node, out)
+                        if reasoning:
+                            yield f"data: {json.dumps({'type': 'step_content', 'node': node, 'content': reasoning})}\n\n"
+
+    except Exception as exc:
+        log.error("streaming_error", error=str(exc))
+        yield f"data: {json.dumps({'type': 'error', 'content': str(exc)})}\n\n"
+
+    # Always emit a metadata event so the frontend can clear "AI is thinking"
+    # and update session flags, even if we never captured a full state dict.
+    triage_state = final_state.get("triage", {}) if final_state else {}
+    meta = {
+        "type": "metadata",
+        "offer_appointment": False,
+        "appointment_booked": False,
+        "requires_human_review": False,
+        "session_id": session_id,
+        "flow_status": "completed",
+        "triage_severity": None,
+        "triage_urgency": None,
+        "triage_concern": None,
+    }
+    if final_state:
+        meta.update({
+            "offer_appointment": final_state.get("offer_appointment", False),
+            "appointment_booked": final_state.get("appointment", {}).get("booked", False),
+            "requires_human_review": final_state.get("requires_human_review", False),
+            "flow_status": final_state.get("flow_status", "completed"),
+            "triage_severity": triage_state.get("severity_score") or triage_state.get("severity"),
+            "triage_urgency": triage_state.get("urgency_level") or triage_state.get("urgency"),
+            "triage_concern": triage_state.get("primary_concern") or triage_state.get("concern"),
+        })
+
+        # Update in-memory session history
+        session_entry = {
+            "session_id": session_id,
+            "created_at": final_state.get("created_at"),
+            "updated_at": final_state.get("updated_at"),
+            "status": final_state.get("flow_status"),
+            "summary": final_state.get("current_input", "")[:50]
+        }
+        existing = next((s for s in _patient_sessions[patient_id] if s["session_id"] == session_id), None)
+        if existing:
+            existing.update(session_entry)
+        else:
+            _patient_sessions[patient_id].append(session_entry)
+
+        # Track sessions that need clinician review
+        if final_state.get("requires_human_review", False):
+            _pending_review_sessions[session_id] = {
+                "session_id": session_id,
+                "flow_status": final_state.get("flow_status", "awaiting_human"),
+                "iteration_count": final_state.get("iteration_count", 0),
+                "max_iterations": final_state.get("max_iterations", 10),
+                "requires_human_review": True,
+                "severity_score": final_state.get("triage", {}).get("severity_score", 0),
+                "urgency_level": final_state.get("triage", {}).get("urgency_level", "unknown"),
+                "appointment_booked": final_state.get("appointment", {}).get("booked", False),
+                "appointment_id": final_state.get("appointment", {}).get("appointment_id") or None,
+                "created_at": final_state.get("created_at", ""),
+                "updated_at": final_state.get("updated_at", ""),
+                "summary": final_state.get("current_input", "")[:80],
+            }
+        else:
+            # Remove from pending if it was previously there (e.g. after re-run)
+            _pending_review_sessions.pop(session_id, None)
+
+    yield f"data: {json.dumps(meta)}\n\n"
 
 
 @asynccontextmanager
@@ -245,7 +451,7 @@ async def metrics():
 
 # ── Triage — start new session ───────────────────────────────────────────────
 
-@app.post("/triage", response_model=TriageResponse, status_code=200, tags=["Triage"])
+@app.post("/triage", tags=["Triage"])
 @limiter.limit(f"{settings.rate_limit_per_minute}/minute")
 async def start_triage(
     request: Request,
@@ -253,39 +459,41 @@ async def start_triage(
     current_user: TokenData = Depends(get_current_user),
 ):
     """
-    Start a new triage session for a patient message.
-
-    Returns a triage assessment, clinical recommendations, and (if applicable)
-    an appointment confirmation.
+    Start a new triage session for a patient message, streaming back tokens.
     """
     if _pipeline is None:
         raise HTTPException(status_code=503, detail="Pipeline not ready")
 
+    patient_id = body.patient_id or current_user.sub
+    session_id = body.session_id or str(uuid.uuid4())
+
     log.info(
-        "triage_request",
-        patient_id=body.patient_id,   # redacted in production
-        session_id=body.session_id,
+        "triage_request_stream",
+        patient_id=patient_id,
+        session_id=session_id,
     )
 
     ACTIVE_SESSIONS.inc()
-    try:
-        state = _pipeline.run(
-            patient_id=body.patient_id,
-            message=body.message,
-            session_id=body.session_id,
-        )
-    except Exception as exc:
-        log.error("triage_pipeline_error", error=str(exc))
-        raise HTTPException(status_code=500, detail="Triage pipeline failed")
-    finally:
-        ACTIVE_SESSIONS.dec()
+    
+    # We dec() inside a background task or just not do it for streaming easily. 
+    # For simplicity, we just use the generator.
+    async def stream():
+        try:
+            async for chunk in event_generator(
+                _pipeline.astream_run(patient_id=patient_id, message=body.message, session_id=session_id),
+                patient_id=patient_id,
+                session_id=session_id
+            ):
+                yield chunk
+        finally:
+            ACTIVE_SESSIONS.dec()
 
-    return _state_to_triage_response(state)
+    return StreamingResponse(stream(), media_type="text/event-stream")
 
 
 # ── Triage — continue / HITL approval ────────────────────────────────────────
 
-@app.post("/triage/{session_id}/continue", response_model=ContinueResponse, tags=["Triage"])
+@app.post("/triage/{session_id}/continue", tags=["Triage"])
 @limiter.limit(f"{settings.rate_limit_per_minute}/minute")
 async def continue_triage(
     request: Request,
@@ -293,45 +501,50 @@ async def continue_triage(
     body: ContinueRequest,
     current_user: TokenData = Depends(get_current_user),
 ):
-    """
-    Continue a triage session.
-
-    - If the session is awaiting human review: pass `human_approval=true/false`
-    - Otherwise: send a follow-up `message` to continue the conversation
-    """
+    """Continue a triage session via SSE stream."""
     if _pipeline is None:
         raise HTTPException(status_code=503, detail="Pipeline not ready")
 
+    patient_id = body.patient_id or current_user.sub
     ACTIVE_SESSIONS.inc()
-    try:
-        if body.human_approval is not None:
-            # HITL path: resume paused session with human decision
-            state = _pipeline.resume(session_id=session_id, human_approved=body.human_approval)
-        elif body.message:
-            # New turn in same session
-            state = _pipeline.run(
-                patient_id=body.patient_id or "unknown",
-                message=body.message,
-                session_id=session_id,
-            )
-        else:
-            raise HTTPException(status_code=422, detail="Provide either 'message' or 'human_approval'")
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
-    except Exception as exc:
-        log.error("continue_pipeline_error", error=str(exc))
-        raise HTTPException(status_code=500, detail="Pipeline continuation failed")
-    finally:
-        ACTIVE_SESSIONS.dec()
+    
+    async def stream():
+        try:
+            if body.human_approval is not None:
+                # Clinician has made a decision — remove from the pending queue immediately
+                _pending_review_sessions.pop(session_id, None)
+                pipeline_iterator = _pipeline.astream_resume(session_id=session_id, human_approved=body.human_approval)
+            elif body.message:
+                pipeline_iterator = _pipeline.astream_run(patient_id=patient_id, message=body.message, session_id=session_id)
+            else:
+                yield f"data: {{\"type\": \"error\", \"content\": \"Provide either message or human_approval\"}}\n\n"
+                return
 
-    return ContinueResponse(
-        session_id=state.session_id,
-        response=state.final_response,
-        flow_status=str(state.flow_status),
-        requires_human_review=state.requires_human_review,
-        severity_score=state.triage.severity_score,
-        urgency_level=str(state.triage.urgency_level),
-    )
+            async for chunk in event_generator(pipeline_iterator, patient_id=patient_id, session_id=session_id):
+                yield chunk
+        except Exception as exc:
+            log.error("continue_pipeline_error", error=str(exc))
+            yield f"data: {{\"type\": \"error\", \"content\": \"{str(exc)}\"}}\n\n"
+        finally:
+            ACTIVE_SESSIONS.dec()
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+@app.get("/sessions", tags=["Triage"])
+async def get_sessions(current_user: TokenData = Depends(get_current_user)):
+    """Fetch all sessions for the current patient."""
+    patient_id = current_user.sub
+    return {"sessions": _patient_sessions.get(patient_id, [])}
+
+
+@app.get("/clinician/pending", tags=["Clinician"])
+async def get_pending_reviews(current_user: TokenData = Depends(get_current_user)):
+    """Return all sessions currently awaiting clinician (HITL) review.
+
+    Accessible by clinicians only — in production add a role check here.
+    For now we return all pending sessions regardless of who triggers it.
+    """
+    return {"sessions": list(_pending_review_sessions.values())}
 
 
 # ── Session status ────────────────────────────────────────────────────────────

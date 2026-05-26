@@ -59,7 +59,7 @@ data/sessions/
 data/failed_flows/
 
 # ── Models (GGUF files are huge — never commit these) ─────────────────────────
-models/
+
 *.gguf
 *.bin
 *.safetensors
