@@ -90,3 +90,23 @@ class ErrorDetail(BaseModel):
     status: int
     detail: str
     instance: str
+
+
+# ── Conversation persistence ──────────────────────────────────────────────────
+
+class ConversationMessage(BaseModel):
+    """A single stored conversation turn returned by GET /api/conversations/{session_id}."""
+    id: int
+    session_id: str
+    user_id: str
+    role: str                # "user" | "assistant"
+    message: str
+    timestamp: str
+
+
+class SaveMessageRequest(BaseModel):
+    """Payload for POST /api/conversations — saves a single message turn."""
+    session_id: str = Field(..., description="Triage session UUID")
+    user_id: str | None = Field(None, description="Patient identifier (falls back to JWT sub)")
+    role: str = Field(..., description='"user" or "assistant"')
+    message: str = Field(..., min_length=1, max_length=8000, description="Message text")

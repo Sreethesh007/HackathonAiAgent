@@ -29,11 +29,14 @@ from slowapi.util import get_remote_address
 
 from src.api.auth import get_current_user, TokenData
 from src.api.login import router as auth_router
+from src.api import conversation_store
 from src.api.schemas import (
     ContinueRequest,
     ContinueResponse,
+    ConversationMessage,
     HealthResponse,
     ProviderInfoResponse,
+    SaveMessageRequest,
     TriageRequest,
     TriageResponse,
     SessionStatusResponse,
@@ -285,6 +288,10 @@ async def lifespan(app: FastAPI):
         llm_model=provider_info.get("model", "unknown"),
     )
 
+    # Initialise SQLite conversation store
+    conversation_store.init_db()
+    log.info("conversation_store_ready", db_path="data/conversations.db")
+
     # Initialise the knowledge retriever (ChromaDB + sentence-transformers)
     try:
         _retriever = KnowledgeRetriever()
@@ -535,6 +542,52 @@ async def get_sessions(current_user: TokenData = Depends(get_current_user)):
     """Fetch all sessions for the current patient."""
     patient_id = current_user.sub
     return {"sessions": _patient_sessions.get(patient_id, [])}
+
+
+# ── Conversation history (SQLite-backed) ──────────────────────────────────────
+
+@app.post("/api/conversations", tags=["Conversations"], status_code=201)
+async def save_conversation_message(
+    body: SaveMessageRequest,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Persist a single conversation message turn.
+
+    The frontend calls this immediately after the user sends a message so the
+    user turn is stored even before the pipeline responds.  The assistant turn
+    is also saveable via this endpoint if needed.
+    """
+    effective_user_id = body.user_id or current_user.sub
+    if body.role not in ("user", "assistant"):
+        raise HTTPException(status_code=422, detail="role must be 'user' or 'assistant'")
+
+    row_id = conversation_store.save_message(
+        session_id=body.session_id,
+        user_id=effective_user_id,
+        role=body.role,
+        message=body.message,
+    )
+    log.info(
+        "conversation_message_saved",
+        session_id=body.session_id,
+        role=body.role,
+        row_id=row_id,
+    )
+    return {"id": row_id, "status": "saved"}
+
+
+@app.get("/api/conversations/{session_id}", tags=["Conversations"])
+async def get_conversation_history(
+    session_id: str,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Return the full message history for a session, ordered by timestamp.
+
+    Returns an empty list (not 404) when the session has no stored messages,
+    so the frontend can distinguish "new session" from "session not found".
+    """
+    messages = conversation_store.get_messages(session_id)
+    return {"session_id": session_id, "messages": messages}
 
 
 @app.get("/clinician/pending", tags=["Clinician"])

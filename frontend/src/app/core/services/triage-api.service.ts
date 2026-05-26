@@ -4,8 +4,10 @@ import { Observable } from 'rxjs';
 import {
   TriageRequest, TriageResponse,
   ContinueRequest, ContinueResponse,
-  SessionStatusResponse, HealthResponse
+  SessionStatusResponse, HealthResponse,
+  ConversationMessage, SaveMessageRequest
 } from '../models/triage.models';
+
 
 @Injectable({ providedIn: 'root' })
 export class TriageApiService {
@@ -35,6 +37,29 @@ export class TriageApiService {
 
   getSessions(): Observable<{ sessions: any[] }> {
     return this.http.get<{ sessions: any[] }>(`${this.base}/sessions`);
+  }
+
+  /**
+   * Fetch the full message history for a session from the SQLite store.
+   * Returns { session_id, messages: ConversationMessage[] }.
+   * An empty messages array means the session exists but has no stored turns.
+   */
+  getConversationHistory(sessionId: string): Observable<{ session_id: string; messages: ConversationMessage[] }> {
+    return this.http.get<{ session_id: string; messages: ConversationMessage[] }>(
+      `${this.base}/api/conversations/${sessionId}`
+    );
+  }
+
+  /**
+   * Persist a single conversation turn (user or assistant).
+   * Called client-side immediately after the user sends a message,
+   * and again after the assistant reply is fully received.
+   */
+  saveConversationMessage(payload: SaveMessageRequest): Observable<{ id: number; status: string }> {
+    return this.http.post<{ id: number; status: string }>(
+      `${this.base}/api/conversations`,
+      payload
+    );
   }
 
   getPendingReviews(): Observable<{ sessions: SessionStatusResponse[] }> {
