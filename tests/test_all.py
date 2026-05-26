@@ -272,7 +272,7 @@ class TestResearchAgent:
             "summary": "Call emergency services immediately.",
             "guidelines_applied": ["AHA Guidelines"],
             "confidence_score": 0.9,
-            "key_actions": ["Call 911"],
+            "key_actions": ["Call 112"],
         })
         agent = ResearchAgent(llm=mock_llm_factory(llm_response), vector_store=mock_vs)
         result = agent.retrieve(emergency_state)
@@ -341,7 +341,7 @@ class TestCriticAgent:
         from src.agent_state import ResearchResult
 
         emergency_state.research = ResearchResult(
-            summary="Call 911.", confidence_score=0.9, guidelines_applied=["AHA"]
+            summary="Call 112.", confidence_score=0.9, guidelines_applied=["AHA"]
         )
         llm_response = json.dumps({
             "quality_score": 0.85,

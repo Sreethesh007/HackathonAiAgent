@@ -193,7 +193,7 @@ class CriticAgent:
 
             if result.approved:
                 # Offer appointment only for moderate cases (severity 3-7)
-                # - Emergency (>=8): patient needs 911, not a scheduled visit
+                # - Emergency (>=8): patient needs 112, not a scheduled visit
                 # - Trivial (<3): no follow-up care needed
                 # - Routine/urgent mid-range: appointment is appropriate
                 severity = state.triage.severity_score

@@ -11,7 +11,7 @@ import {
 export class TriageApiService {
   private base = '/api';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   startTriage(req: TriageRequest): Observable<TriageResponse> {
     return this.http.post<TriageResponse>(`${this.base}/triage`, req);
@@ -33,12 +33,12 @@ export class TriageApiService {
     return this.http.get<SessionStatusResponse>(`${this.base}/triage/${sessionId}/status`);
   }
 
-  getSessions(): Observable<{sessions: any[]}> {
-    return this.http.get<{sessions: any[]}>(`${this.base}/sessions`);
+  getSessions(): Observable<{ sessions: any[] }> {
+    return this.http.get<{ sessions: any[] }>(`${this.base}/sessions`);
   }
 
-  getPendingReviews(): Observable<{sessions: SessionStatusResponse[]}> {
-    return this.http.get<{sessions: SessionStatusResponse[]}>(`${this.base}/clinician/pending`);
+  getPendingReviews(): Observable<{ sessions: SessionStatusResponse[] }> {
+    return this.http.get<{ sessions: SessionStatusResponse[] }>(`${this.base}/clinician/pending`);
   }
 
   healthCheck(): Observable<HealthResponse> {
@@ -47,14 +47,17 @@ export class TriageApiService {
 
   private createFetchStream(url: string, body: any): Observable<any> {
     return new Observable(observer => {
+      const controller = new AbortController();
       const token = localStorage.getItem('hta_token');
+
       fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: controller.signal
       }).then(async response => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         if (!response.body) throw new Error('No body');
@@ -71,12 +74,20 @@ export class TriageApiService {
             if (line.startsWith('data: ')) {
               try {
                 observer.next(JSON.parse(line.substring(6)));
-              } catch (e) {}
+              } catch (e) { }
             }
           }
         }
         observer.complete();
-      }).catch(err => observer.error(err));
+      }).catch(err => {
+        // AbortError is expected on unsubscribe — suppress it silently
+        if (err?.name !== 'AbortError') {
+          observer.error(err);
+        }
+      });
+
+      // Teardown: abort the in-flight fetch and cancel the reader loop
+      return () => controller.abort();
     });
   }
 }

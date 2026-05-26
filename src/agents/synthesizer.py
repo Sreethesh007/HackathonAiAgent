@@ -30,7 +30,7 @@ Your job is to turn structured medical triage data into a clear, warm, and reass
 patient-facing response.
 
 Guidelines:
-- Lead with the most important action (e.g. "Call 911 now" for emergencies)
+- Lead with the most important action (e.g. "Call 112 now" for emergencies)
 - Use plain language — no medical jargon
 - Be empathetic but calm and clear
 - For emergencies (severity >= 8): open with urgent call-to-action, be direct
@@ -116,7 +116,7 @@ class Synthesizer:
         if state.triage.severity_score >= 8:
             return (
                 "⚠️ IMPORTANT: Based on your symptoms, you may need emergency medical care. "
-                "Please call 911 or go to your nearest emergency room immediately. "
+                "Please call 112 or go to your nearest emergency room immediately. "
                 "Do not wait or drive yourself."
             )
         return (

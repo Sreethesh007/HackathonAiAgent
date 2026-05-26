@@ -117,7 +117,7 @@ def scenario_1_emergency():
     """
     SCENARIO 1: Emergency — Cardiac event symptoms
     Expected flow: Orchestrator → Triage(score=9, emergency) → Research(cardiac) →
-                   Critic(approve) → Synthesizer("Call 911")
+                   Critic(approve) → Synthesizer("Call 112")
     """
     return run_scenario(
         scenario_num=1,
@@ -128,7 +128,7 @@ def scenario_1_emergency():
             "It started about 20 minutes ago and I'm sweating and feeling nauseous. "
             "My grandfather died of a heart attack. What should I do?"
         ),
-        description="Classic cardiac emergency presentation — should trigger immediate 911 recommendation.",
+        description="Classic cardiac emergency presentation — should trigger immediate 112 recommendation.",
         expected_urgency="emergency",
     )
 
