@@ -1003,15 +1003,33 @@ export class TriagePageComponent implements OnInit {
 
   loadSession(sessionId: string) {
     this.activeSessionId = sessionId;
-    this.messages = [];
     this.thinkingSteps = [];
     this.thinkingExpanded = true;
     this.offerAppointment = false;
     this.appointmentOfferAnswered = false;
     this.agentMessageReceived = false;
     this.agentReplyPreview = null;
-    this.notify.success('Session loaded. You can continue the chat.');
+    this.requiresHumanReview = false;
+    this.messages = [];          // clear optimistically while loading
     this.cdr.markForCheck();
+
+    this.api.getConversationHistory(sessionId).subscribe({
+      next: (res) => {
+        this.messages = res.messages.map(m => ({
+          role: m.role === 'user' ? 'user' : 'agent' as 'user' | 'agent' | 'system',
+          content: m.message
+        }));
+        if (this.messages.length > 0) {
+          this.notify.success('Chat history loaded.');
+        }
+        this.cdr.markForCheck();
+        this.scrollToBottom();
+      },
+      error: () => {
+        this.notify.error('Could not load chat history.');
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   sendReply(text: string) {
@@ -1047,17 +1065,52 @@ export class TriagePageComponent implements OnInit {
         this.thinkingSteps.forEach(s => s.done = true);
         this.isStreaming = false;
         this.fetchSessions();
+
+        // Persist the assistant reply to SQLite once streaming is complete
+        const assistantContent = this.agentReplyPreview;
+        const sessionId = this.activeSessionId;
+        if (assistantContent && sessionId) {
+          this.api.saveConversationMessage({
+            session_id: sessionId,
+            role: 'assistant',
+            message: assistantContent
+          }).subscribe();
+        }
+
         this.cdr.markForCheck();
       }
     };
 
     this.agentMessageReceived = false;
     if (this.activeSessionId) {
+      // Persist user turn immediately (before pipeline runs)
+      this.api.saveConversationMessage({
+        session_id: this.activeSessionId,
+        role: 'user',
+        message: text
+      }).subscribe();
+
       const req: ContinueRequest = { message: text, patient_id: null, human_approval: null };
       this.api.streamContinue(this.activeSessionId, req).subscribe(streamObserver);
     } else {
       const req: TriageRequest = { message: text, patient_id: null, session_id: null };
-      this.api.streamTriage(req).subscribe(streamObserver);
+      this.api.streamTriage(req).subscribe({
+        next: (event: any) => {
+          // Capture session_id from metadata event so we can save the user turn
+          if (event?.type === 'metadata' && event.session_id && !this.activeSessionId) {
+            this.activeSessionId = event.session_id;
+            // Save user turn now that we have a session_id
+            this.api.saveConversationMessage({
+              session_id: event.session_id,
+              role: 'user',
+              message: text
+            }).subscribe();
+          }
+          streamObserver.next(event);
+        },
+        error: streamObserver.error,
+        complete: streamObserver.complete
+      });
     }
   }
 

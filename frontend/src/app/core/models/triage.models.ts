@@ -54,3 +54,24 @@ export interface HealthResponse {
   llm_model?: string;
   environment?: string;
 }
+
+// ── Conversation persistence ──────────────────────────────────────────────────
+
+/** A single stored conversation turn returned by GET /api/conversations/:sessionId */
+export interface ConversationMessage {
+  id: number;
+  session_id: string;
+  user_id: string;
+  role: 'user' | 'assistant';
+  message: string;
+  timestamp: string;
+}
+
+/** Payload for POST /api/conversations */
+export interface SaveMessageRequest {
+  session_id: string;
+  user_id?: string | null;
+  role: 'user' | 'assistant';
+  message: string;
+}
+
