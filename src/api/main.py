@@ -49,6 +49,7 @@ from src.memory import KnowledgeRetriever
 from src.llm.provider import check_provider_health, get_provider_info
 from src.observability.logging import configure_logging, get_logger
 from src.observability.metrics import ACTIVE_SESSIONS, API_LATENCY, API_REQUESTS
+from src.db import init_db, add_appointment, get_all_appointments as db_get_appointments
 
 log = get_logger(__name__)
 
@@ -60,6 +61,8 @@ _start_time = time.time()
 _patient_sessions = __import__('collections').defaultdict(list)
 # Stores sessions awaiting clinician review: session_id -> SessionStatusResponse-like dict
 _pending_review_sessions: dict = {}
+# Stores booked appointments
+_appointments = []
 
 # SSE Event Generator Helper
 def _extract_text_from_chunk(chunk_content) -> str:
@@ -205,7 +208,16 @@ async def event_generator(pipeline_iterator, patient_id: str, session_id: str):
 
     # Always emit a metadata event so the frontend can clear "AI is thinking"
     # and update session flags, even if we never captured a full state dict.
-    triage_state = final_state.get("triage", {}) if final_state else {}
+    
+    def _to_dict(obj):
+        if not obj: return {}
+        if isinstance(obj, dict): return obj
+        if hasattr(obj, "model_dump"): return obj.model_dump()
+        return vars(obj)
+
+    triage_state = _to_dict(final_state.get("triage")) if final_state else {}
+    appt_data = _to_dict(final_state.get("appointment")) if final_state else {}
+
     meta = {
         "type": "metadata",
         "offer_appointment": False,
@@ -220,7 +232,7 @@ async def event_generator(pipeline_iterator, patient_id: str, session_id: str):
     if final_state:
         meta.update({
             "offer_appointment": final_state.get("offer_appointment", False),
-            "appointment_booked": final_state.get("appointment", {}).get("booked", False),
+            "appointment_booked": appt_data.get("booked", False),
             "requires_human_review": final_state.get("requires_human_review", False),
             "flow_status": final_state.get("flow_status", "completed"),
             "triage_severity": triage_state.get("severity_score") or triage_state.get("severity"),
@@ -241,6 +253,21 @@ async def event_generator(pipeline_iterator, patient_id: str, session_id: str):
             existing.update(session_entry)
         else:
             _patient_sessions[patient_id].append(session_entry)
+
+        # Track appointments
+        if appt_data.get("booked"):
+            appt_id = appt_data.get("appointment_id")
+            if appt_id:
+                add_appointment({
+                    "appointment_id": appt_id,
+                    "datetime_iso": appt_data.get("datetime_iso"),
+                    "provider": appt_data.get("provider"),
+                    "location": appt_data.get("location"),
+                    "patient_name": appt_data.get("patient_name", "Unknown"),
+                    "patient_age": appt_data.get("patient_age", "Unknown"),
+                    "reason": triage_state.get("primary_concern", "N/A"),
+                    "session_id": session_id
+                })
 
         # Track sessions that need clinician review
         if final_state.get("requires_human_review", False):
@@ -272,6 +299,7 @@ async def lifespan(app: FastAPI):
 
     configure_logging()
     settings.ensure_dirs()
+    init_db()
 
     # Validate LLM config before starting — fail fast with a clear message
     issues = settings.validate_llm_config()
@@ -598,6 +626,11 @@ async def get_pending_reviews(current_user: TokenData = Depends(get_current_user
     For now we return all pending sessions regardless of who triggers it.
     """
     return {"sessions": list(_pending_review_sessions.values())}
+
+@app.get("/clinician/appointments", tags=["Clinician"])
+async def get_all_appointments_api(current_user: TokenData = Depends(get_current_user)):
+    """Return all booked appointments for the clinician dashboard."""
+    return {"appointments": db_get_appointments()}
 
 
 # ── Session status ────────────────────────────────────────────────────────────

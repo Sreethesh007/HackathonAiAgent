@@ -66,6 +66,10 @@ export class TriageApiService {
     return this.http.get<{ sessions: SessionStatusResponse[] }>(`${this.base}/clinician/pending`);
   }
 
+  getAppointments(): Observable<{appointments: any[]}> {
+    return this.http.get<{appointments: any[]}>(`${this.base}/clinician/appointments`);
+  }
+
   healthCheck(): Observable<HealthResponse> {
     return this.http.get<HealthResponse>(`${this.base}/health`);
   }
