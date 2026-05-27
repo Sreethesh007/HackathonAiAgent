@@ -279,14 +279,21 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
               </div>
             </ng-container>
             <ng-container *ngIf="showAppointmentForm">
-              <p>Please provide your details for the appointment:</p>
+              <p>Please select a day and time for the appointment:</p>
               <div class="appointment-form">
-                <input type="text" [(ngModel)]="patientName" placeholder="Full Name" class="appt-input" />
-                <input type="number" [(ngModel)]="patientAge" placeholder="Age" class="appt-input" />
-                <div class="actions" style="margin-top: 12px;">
-                  <button class="btn-yes" (click)="submitAppointment()" [disabled]="!patientName || !patientAge">Submit</button>
-                  <button class="btn-no" (click)="showAppointmentForm = false">Cancel</button>
-                </div>
+                <input type="text" [(ngModel)]="appointmentDay" placeholder="Day (e.g. Monday)" class="appt-input" />
+                <input type="time" [(ngModel)]="appointmentTime" class="appt-input" />
+                <button *ngIf="!availabilityChecked" class="btn-no" (click)="checkAvailability()" [disabled]="!appointmentDay || !appointmentTime">Check Availability</button>
+                <ng-container *ngIf="availabilityChecked">
+                  <p style="color: #14b8a6; margin-top: 8px;">The clinician is free at that time.</p>
+                  <p style="margin-top: 8px;">Please provide your details:</p>
+                  <input type="text" [(ngModel)]="patientName" placeholder="Full Name" class="appt-input" />
+                  <input type="number" [(ngModel)]="patientAge" placeholder="Age" class="appt-input" />
+                  <div class="actions" style="margin-top: 12px;">
+                    <button class="btn-yes" (click)="submitAppointment()" [disabled]="!patientName || !patientAge">Submit</button>
+                    <button class="btn-no" (click)="showAppointmentForm = false; availabilityChecked = false">Cancel</button>
+                  </div>
+                </ng-container>
               </div>
             </ng-container>
           </div>
@@ -964,6 +971,9 @@ export class TriagePageComponent implements OnInit {
   offerAppointment = false;
   appointmentOfferAnswered = false;
   showAppointmentForm = false;
+  availabilityChecked = false;
+  appointmentDay = '';
+  appointmentTime = '';
   patientName = '';
   patientAge: number | null = null;
   requiresHumanReview = false;
@@ -1020,6 +1030,9 @@ export class TriagePageComponent implements OnInit {
     this.offerAppointment = false;
     this.appointmentOfferAnswered = false;
     this.showAppointmentForm = false;
+    this.availabilityChecked = false;
+    this.appointmentDay = '';
+    this.appointmentTime = '';
     this.patientName = '';
     this.patientAge = null;
     this.requiresHumanReview = false;
@@ -1035,6 +1048,9 @@ export class TriagePageComponent implements OnInit {
     this.offerAppointment = false;
     this.appointmentOfferAnswered = false;
     this.showAppointmentForm = false;
+    this.availabilityChecked = false;
+    this.appointmentDay = '';
+    this.appointmentTime = '';
     this.agentMessageReceived = false;
     this.agentReplyPreview = null;
     this.requiresHumanReview = false;
@@ -1060,11 +1076,17 @@ export class TriagePageComponent implements OnInit {
     });
   }
 
+  checkAvailability() {
+    this.availabilityChecked = true;
+    this.cdr.markForCheck();
+  }
+
   submitAppointment() {
     this.appointmentOfferAnswered = true;
     this.offerAppointment = false;
     this.showAppointmentForm = false;
-    const msg = `Yes, please book an appointment. My name is ${this.patientName} and I am ${this.patientAge} years old.`;
+    this.availabilityChecked = false;
+    const msg = `Yes, please book an appointment for ${this.appointmentDay} at ${this.appointmentTime}. My name is ${this.patientName} and I am ${this.patientAge} years old.`;
     this.inputText = msg;
     this.sendMessage();
   }
@@ -1332,12 +1354,16 @@ export class TriagePageComponent implements OnInit {
         this.activeSessionId = event.session_id;
       }
       if (!this.agentMessageReceived) {
-        this.agentReplyPreview = this.buildFallbackReply(
-          event.triage_severity,
-          event.triage_urgency,
-          event.triage_concern,
-          event.offer_appointment
-        );
+        if (event.final_response) {
+          this.agentReplyPreview = event.final_response;
+        } else {
+          this.agentReplyPreview = this.buildFallbackReply(
+            event.triage_severity,
+            event.triage_urgency,
+            event.triage_concern,
+            event.offer_appointment
+          );
+        }
         this.agentMessageReceived = true;
       }
       this.thinkingSteps.forEach(s => s.done = true);

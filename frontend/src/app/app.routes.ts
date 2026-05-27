@@ -51,6 +51,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/clinician/pending-review-page/pending-review-page.component')
             .then(m => m.PendingReviewPageComponent)
+      },
+      {
+        path: 'appointments',
+        loadComponent: () =>
+          import('./features/clinician/appointments-page/appointments-page.component')
+            .then(m => m.AppointmentsPageComponent)
       }
     ]
   },

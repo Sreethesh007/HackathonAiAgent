@@ -23,7 +23,10 @@ import { FadeInDirective } from '../../../shared/directives/fade-in.directive';
           
           <ng-container matColumnDef="date">
             <th mat-header-cell *matHeaderCellDef> Date & Time </th>
-            <td mat-cell *matCellDef="let element"> {{ element.datetime_iso | date:'MMM d, y, h:mm a' }} </td>
+            <td mat-cell *matCellDef="let element"> 
+              <span *ngIf="element.datetime_iso?.startsWith('Requested')">{{ element.datetime_iso }}</span>
+              <span *ngIf="!element.datetime_iso?.startsWith('Requested')">{{ element.datetime_iso | date:'EEEE, MMM d, y, h:mm a' }}</span>
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="patient">

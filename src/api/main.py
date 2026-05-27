@@ -144,13 +144,15 @@ def _extract_node_reasoning(node: str, state_dict: dict) -> str:
             return " — ".join(parts) if parts else ""
 
     if node == "scheduler":
-        a = state_dict.get("appointment", {})
-        if isinstance(a, dict) and a.get("booked"):
-            provider = a.get("provider", "")
-            dt = a.get("datetime_iso", "")
-            appt_id = a.get("appointment_id", "")
-            return f"Appointment booked — {provider} on {dt} (ID: {appt_id})"
-        return "Appointment booking attempted but no slot confirmed."
+        s = state_dict.get("appointment", {})
+        if isinstance(s, dict):
+            booked = s.get("booked", False)
+            if booked:
+                return f"✅ Appointment booked with {s.get('provider')} on {s.get('datetime_iso')} at {s.get('location')}"
+            else:
+                return "❌ No suitable appointment found or booking failed."
+
+
 
     return ""
 
@@ -238,6 +240,7 @@ async def event_generator(pipeline_iterator, patient_id: str, session_id: str):
             "triage_severity": triage_state.get("severity_score") or triage_state.get("severity"),
             "triage_urgency": triage_state.get("urgency_level") or triage_state.get("urgency"),
             "triage_concern": triage_state.get("primary_concern") or triage_state.get("concern"),
+            "final_response": final_state.get("final_response", ""),
         })
 
         # Update in-memory session history

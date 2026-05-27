@@ -39,8 +39,9 @@ Guidelines:
 - If `offer_appointment` is true, explicitly ask the user if they would like you to book an appointment for them, or if they have any specific time preferences.
 - Always end with: "If your symptoms worsen suddenly, seek emergency care immediately."
 - Keep response under 250 words
+- If an appointment is booked, confirm the date, time, provider, and location clearly and warmly.
 
-You will receive structured JSON — respond ONLY with the patient message text (plain prose, no JSON)."""
+You will receive structured JSON — respond ONLY with the text of the message you want to send to the patient (plain prose, no JSON)."""
 
 
 class Synthesizer:
@@ -92,6 +93,7 @@ class Synthesizer:
             )
 
         context = {
+            "patient_message": state.current_input,
             "severity_score": state.triage.severity_score,
             "urgency_level": str(state.triage.urgency_level),
             "primary_concern": state.triage.primary_concern,
@@ -109,7 +111,10 @@ class Synthesizer:
             SystemMessage(content=SYNTHESIZER_SYSTEM_PROMPT),
             HumanMessage(content=json.dumps(context, indent=2)),
         ])
-        return response.content.strip()
+        content = response.content.strip()
+        if not content:
+            raise ValueError("LLM returned an empty response")
+        return content
 
     def _emergency_fallback(self, state: AgentState) -> str:
         """Hard-coded safe fallback when LLM call fails entirely."""
