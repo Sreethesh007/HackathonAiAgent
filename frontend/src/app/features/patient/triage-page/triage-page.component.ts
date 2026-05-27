@@ -271,11 +271,24 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
 
           <!-- Interactive block for appointments -->
           <div class="interactive-block" *ngIf="offerAppointment && !isStreaming">
-            <p>Would you like me to book an appointment for you?</p>
-            <div class="actions">
-              <button class="btn-yes" (click)="sendReply('Yes, please book an appointment.')">Yes</button>
-              <button class="btn-no" (click)="sendReply('No, thank you.')">No</button>
-            </div>
+            <ng-container *ngIf="!showAppointmentForm">
+              <p>Would you like me to book an appointment for you?</p>
+              <div class="actions">
+                <button class="btn-yes" (click)="showAppointmentForm = true">Yes</button>
+                <button class="btn-no" (click)="declineAppointment()">No</button>
+              </div>
+            </ng-container>
+            <ng-container *ngIf="showAppointmentForm">
+              <p>Please provide your details for the appointment:</p>
+              <div class="appointment-form">
+                <input type="text" [(ngModel)]="patientName" placeholder="Full Name" class="appt-input" />
+                <input type="number" [(ngModel)]="patientAge" placeholder="Age" class="appt-input" />
+                <div class="actions" style="margin-top: 12px;">
+                  <button class="btn-yes" (click)="submitAppointment()" [disabled]="!patientName || !patientAge">Submit</button>
+                  <button class="btn-no" (click)="showAppointmentForm = false">Cancel</button>
+                </div>
+              </div>
+            </ng-container>
           </div>
         </div>
 
@@ -905,9 +918,16 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
     .actions { display: flex; gap: 12px; }
     .actions button { padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
     .btn-yes { background: #14b8a6; color: white; }
-    .btn-yes:hover { background: #0d9488; transform: translateY(-1px); }
+    .btn-yes:hover:not(:disabled) { background: #0d9488; transform: translateY(-1px); }
+    .btn-yes:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-no { background: #334155; color: #e2e8f0; }
     .btn-no:hover { background: #475569; transform: translateY(-1px); }
+    .appointment-form { display: flex; flex-direction: column; gap: 8px; }
+    .appt-input {
+      padding: 10px; border-radius: 8px; border: 1px solid #334155;
+      background: #1e293b; color: #f8fafc; font-size: 0.95rem; outline: none;
+    }
+    .appt-input:focus { border-color: #6366f1; }
 
     /* Input Area */
     .chat-input-area { padding: 24px 32px; background: linear-gradient(to top, #0f172a 80%, transparent); }
@@ -943,6 +963,9 @@ export class TriagePageComponent implements OnInit {
   isStreaming = false;
   offerAppointment = false;
   appointmentOfferAnswered = false;
+  showAppointmentForm = false;
+  patientName = '';
+  patientAge: number | null = null;
   requiresHumanReview = false;
   agentMessageReceived = false;
   agentReplyPreview: string | null = null;
@@ -993,11 +1016,14 @@ export class TriagePageComponent implements OnInit {
     this.messages = [];
     this.thinkingSteps = [];
     this.thinkingExpanded = true;
+    this.agentReplyPreview = null;
     this.offerAppointment = false;
     this.appointmentOfferAnswered = false;
+    this.showAppointmentForm = false;
+    this.patientName = '';
+    this.patientAge = null;
     this.requiresHumanReview = false;
     this.agentMessageReceived = false;
-    this.agentReplyPreview = null;
     this.cdr.markForCheck();
   }
 
@@ -1005,8 +1031,10 @@ export class TriagePageComponent implements OnInit {
     this.activeSessionId = sessionId;
     this.thinkingSteps = [];
     this.thinkingExpanded = true;
+    this.agentReplyPreview = null;
     this.offerAppointment = false;
     this.appointmentOfferAnswered = false;
+    this.showAppointmentForm = false;
     this.agentMessageReceived = false;
     this.agentReplyPreview = null;
     this.requiresHumanReview = false;
@@ -1030,6 +1058,24 @@ export class TriagePageComponent implements OnInit {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  submitAppointment() {
+    this.appointmentOfferAnswered = true;
+    this.offerAppointment = false;
+    this.showAppointmentForm = false;
+    const msg = `Yes, please book an appointment. My name is ${this.patientName} and I am ${this.patientAge} years old.`;
+    this.inputText = msg;
+    this.sendMessage();
+  }
+
+  declineAppointment() {
+    this.appointmentOfferAnswered = true;
+    this.offerAppointment = false;
+    this.showAppointmentForm = false;
+    this.messages.push({ role: 'agent', content: 'Thank you. If you change your mind, you can always ask later.' });
+    this.inputText = 'No, thank you.';
+    this.sendMessage();
   }
 
   sendReply(text: string) {

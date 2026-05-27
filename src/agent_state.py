@@ -90,6 +90,8 @@ class AppointmentResult(BaseModel):
     provider: str = ""
     confirmation_message: str = ""
     booked: bool = False
+    patient_name: str = ""
+    patient_age: str = ""
 
 
 class CriticResult(BaseModel):

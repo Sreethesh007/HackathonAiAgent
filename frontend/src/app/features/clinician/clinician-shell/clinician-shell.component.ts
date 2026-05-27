@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
@@ -7,7 +7,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatBadgeModule } from '@angular/material/badge';
 import { AuthService } from '../../../core/services/auth.service';
+import { TriageApiService } from '../../../core/services/triage-api.service';
 
 @Component({
   selector: 'app-clinician-shell',
@@ -15,7 +17,7 @@ import { AuthService } from '../../../core/services/auth.service';
   imports: [
     RouterOutlet, RouterLink, RouterLinkActive,
     MatSidenavModule, MatListModule, MatToolbarModule,
-    MatIconModule, MatButtonModule, MatTooltipModule, MatChipsModule
+    MatIconModule, MatButtonModule, MatTooltipModule, MatChipsModule, MatBadgeModule
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -31,8 +33,12 @@ import { AuthService } from '../../../core/services/auth.service';
             <span matListItemTitle>Overview</span>
           </a>
           <a mat-list-item routerLink="pending" routerLinkActive="active-nav-link-accent" id="navPending">
-            <mat-icon matListItemIcon>pending_actions</mat-icon>
+            <mat-icon matListItemIcon [matBadge]="pendingCount > 0 ? pendingCount : null" matBadgeColor="warn" matBadgeSize="small">pending_actions</mat-icon>
             <span matListItemTitle>HITL Queue</span>
+          </a>
+          <a mat-list-item routerLink="appointments" routerLinkActive="active-nav-link-accent" id="navAppointments">
+            <mat-icon matListItemIcon>event</mat-icon>
+            <span matListItemTitle>Appointments</span>
           </a>
         </mat-nav-list>
         <div class="sidenav-footer">
@@ -58,6 +64,28 @@ import { AuthService } from '../../../core/services/auth.service';
     .top-bar { background: #111827 !important; border-bottom: 1px solid rgba(255,255,255,0.08) !important; }
   `]
 })
-export class ClinicianShellComponent {
-  constructor(public auth: AuthService) {}
+export class ClinicianShellComponent implements OnInit, OnDestroy {
+  pendingCount = 0;
+  private pollTimer: any;
+
+  constructor(public auth: AuthService, private api: TriageApiService, private cdr: ChangeDetectorRef) {}
+
+  ngOnInit() {
+    this.fetchPending();
+    this.pollTimer = setInterval(() => this.fetchPending(), 10000);
+  }
+
+  ngOnDestroy() {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+  }
+
+  fetchPending() {
+    this.api.getPendingReviews().subscribe({
+      next: (res) => {
+        this.pendingCount = (res.sessions || []).length;
+        this.cdr.markForCheck();
+      },
+      error: () => {}
+    });
+  }
 }

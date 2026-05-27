@@ -11,5 +11,10 @@ export const CLINICIAN_ROUTES: Routes = [
     path: 'pending',
     loadComponent: () =>
       import('./pending-review-page/pending-review-page.component').then(m => m.PendingReviewPageComponent)
+  },
+  {
+    path: 'appointments',
+    loadComponent: () =>
+      import('./appointments-page/appointments-page.component').then(m => m.AppointmentsPageComponent)
   }
 ];

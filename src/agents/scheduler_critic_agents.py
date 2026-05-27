@@ -38,7 +38,9 @@ Output a JSON object with EXACTLY these keys:
   "selected_slot_id": "<slot_id from the available slots>",
   "reasoning": "<why you chose this slot>",
   "appointment_type": "<telemedicine|in_person>",
-  "pre_appointment_advice": "<what the patient should do before the appointment>"
+  "pre_appointment_advice": "<what the patient should do before the appointment>",
+  "patient_name": "<extracted from message, or 'Unknown'>",
+  "patient_age": "<extracted from message, or 'Unknown'>"
 }
 
 CRITICAL: selected_slot_id must exactly match one of the provided slot IDs.
@@ -63,7 +65,7 @@ class SchedulerAgent:
 
         try:
             slots = check_availability(date_range="next_available", urgency=urgency)
-            selected = self._select_slot(state, slots)
+            selected, parsed_data = self._select_slot(state, slots)
             confirmation = book_appointment(
                 slot_id=selected["slot_id"],
                 patient_id=state.patient_id,
@@ -80,6 +82,8 @@ class SchedulerAgent:
                 provider=slot_detail["provider"],
                 confirmation_message=confirmation["message"],
                 booked=True,
+                patient_name=parsed_data.get("patient_name", "Unknown"),
+                patient_age=str(parsed_data.get("patient_age", "Unknown"))
             )
             state.add_message(
                 "agent",
@@ -102,7 +106,7 @@ class SchedulerAgent:
         return state
 
     @retry(stop=stop_after_attempt(2), wait=wait_exponential(multiplier=1, min=1, max=4), reraise=True)
-    def _select_slot(self, state: AgentState, slots: list[dict]) -> dict:
+    def _select_slot(self, state: AgentState, slots: list[dict]) -> tuple[dict, dict]:
         """LLM selects the best slot; falls back to first slot on parse error."""
         slots_text = json.dumps(slots, indent=2)
         prompt = (
@@ -116,10 +120,10 @@ class SchedulerAgent:
             SystemMessage(content=SCHEDULER_SYSTEM_PROMPT),
             HumanMessage(content=prompt),
         ])
-        data = json.loads(response.content.strip())
+        data = extract_json(response.content.strip())
         selected_id = data.get("selected_slot_id", slots[0]["slot_id"])
         matched = next((s for s in slots if s["slot_id"] == selected_id), slots[0])
-        return matched
+        return matched, data
 
 
 # ─────────────────────────────────────────────────────────────────────────────

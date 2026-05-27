@@ -1,43 +1,55 @@
-import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { TriageApiService } from '../../../core/services/triage-api.service';
-import { ChartCardComponent } from '../../../shared/components/chart-card/chart-card.component';
-import { ChartData, ChartOptions } from 'chart.js';
 import { FadeInDirective } from '../../../shared/directives/fade-in.directive';
 
 @Component({
   selector: 'app-overview-page',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, ChartCardComponent, FadeInDirective],
+  imports: [CommonModule, MatCardModule, MatIconModule, FadeInDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page-container">
       <div class="page-header">
         <h2 class="page-title"><mat-icon>dashboard</mat-icon> Clinician Overview</h2>
-        <p class="page-sub">Real-time system health and triage activity.</p>
+        <p class="page-sub">Real-time triage queue and appointment stats.</p>
       </div>
 
       <div class="stat-grid">
-        <mat-card class="stat-card u-hover-lift" *ngFor="let s of stats" appFadeIn tabindex="0" [attr.aria-label]="s.label + ' ' + s.value">
+        <mat-card class="stat-card u-hover-lift" appFadeIn tabindex="0" aria-label="Pending Reviews">
           <mat-card-content class="stat-body">
-            <mat-icon [style.color]="s.color" class="stat-icon" aria-hidden="true">{{ s.icon }}</mat-icon>
+            <mat-icon style="color: #f59e0b;" class="stat-icon" aria-hidden="true">pending_actions</mat-icon>
             <div>
-              <div class="stat-val">{{ s.value }}</div>
-              <div class="stat-lbl">{{ s.label }}</div>
+              <div class="stat-val">{{ pendingCount }}</div>
+              <div class="stat-lbl">Pending HITL Reviews</div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card u-hover-lift" appFadeIn tabindex="0" aria-label="Total Appointments">
+          <mat-card-content class="stat-body">
+            <mat-icon style="color: #10b981;" class="stat-icon" aria-hidden="true">event_available</mat-icon>
+            <div>
+              <div class="stat-val">{{ appointmentsCount }}</div>
+              <div class="stat-lbl">Total Appointments</div>
             </div>
           </mat-card-content>
         </mat-card>
       </div>
 
-      <div class="chart-grid">
-        <app-chart-card class="u-hover-lift" appFadeIn title="Urgency Distribution" icon="donut_large"
-          type="doughnut" [data]="urgencyData" [options]="doughnutOpts" tabindex="0" aria-label="Urgency Distribution Chart">
-        </app-chart-card>
-        <app-chart-card class="u-hover-lift" appFadeIn title="Agent Latency (ms)" subtitle="Average per agent" icon="monitor_heart"
-          type="bar" [data]="latencyData" [options]="barOpts" tabindex="0" aria-label="Agent Latency Chart">
-        </app-chart-card>
+      <div class="info-section" appFadeIn>
+        <mat-card class="info-card">
+          <mat-card-content>
+            <h3><mat-icon>info</mat-icon> Getting Started</h3>
+            <p>Welcome to the new clinician dashboard.</p>
+            <ul>
+              <li><strong>HITL Queue:</strong> Review and approve AI-generated triage responses before they reach the patient.</li>
+              <li><strong>Appointments:</strong> View details of patients who have successfully booked a slot.</li>
+            </ul>
+          </mat-card-content>
+        </mat-card>
       </div>
     </div>
   `,
@@ -47,53 +59,51 @@ import { FadeInDirective } from '../../../shared/directives/fade-in.directive';
     .page-title { display: flex; align-items: center; gap: 10px; font-size: 1.5rem; font-weight: 700; color: #f1f5f9; margin: 0 0 6px; }
     .page-title mat-icon { color: #14b8a6; }
     .page-sub { color: #94a3b8; margin: 0; }
-    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .stat-card { background: #111827 !important; border: 1px solid rgba(255,255,255,0.08) !important; border-radius: 16px !important; }
     .stat-body { display: flex; align-items: center; gap: 14px; padding: 18px 14px; }
     .stat-icon { font-size: 34px; width: 34px; height: 34px; }
-    .stat-val { font-size: 1.6rem; font-weight: 700; color: #f1f5f9; line-height: 1; }
-    .stat-lbl { font-size: 0.78rem; color: #94a3b8; margin-top: 4px; }
-    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-    @media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
+    .stat-val { font-size: 2rem; font-weight: 700; color: #f1f5f9; line-height: 1; }
+    .stat-lbl { font-size: 0.9rem; color: #94a3b8; margin-top: 4px; }
+    
+    .info-section { margin-top: 24px; }
+    .info-card { background: #111827 !important; border: 1px solid rgba(255,255,255,0.08) !important; border-radius: 16px !important; color: #cbd5e1; }
+    .info-card h3 { display: flex; align-items: center; gap: 8px; color: #e2e8f0; margin-top: 0; }
+    .info-card h3 mat-icon { color: #3b82f6; }
+    .info-card p { font-size: 0.95rem; line-height: 1.5; }
+    .info-card ul { margin: 12px 0 0 20px; padding: 0; line-height: 1.6; }
+    .info-card li { margin-bottom: 8px; }
   `]
 })
-export class OverviewPageComponent implements OnInit {
-  stats = [
-    { label: 'Pipeline',    value: '…', icon: 'hub',       color: '#6366f1' },
-    { label: 'LLM Model',   value: '…', icon: 'smart_toy', color: '#14b8a6' },
-    { label: 'Environment', value: '…', icon: 'cloud',     color: '#f59e0b' },
-    { label: 'Uptime',      value: '…', icon: 'timer',     color: '#10b981' }
-  ];
-
-  urgencyData: ChartData = {
-    labels: ['Emergency', 'Urgent', 'Routine', 'Low'],
-    datasets: [{ data: [15, 25, 45, 15], backgroundColor: ['#e53935','#fb8c00','#43a047','#1e88e5'] }]
-  };
-
-  latencyData: ChartData = {
-    labels: ['Triage', 'Research', 'Critic', 'Scheduler', 'Synthesizer'],
-    datasets: [{
-      label: 'Avg ms', data: [120, 450, 80, 95, 60],
-      backgroundColor: 'rgba(99,102,241,0.7)', borderColor: '#6366f1',
-      borderWidth: 2, borderRadius: 6
-    }]
-  };
-
-  doughnutOpts: ChartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } };
-  barOpts: ChartOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } };
+export class OverviewPageComponent implements OnInit, OnDestroy {
+  pendingCount = 0;
+  appointmentsCount = 0;
+  private pollTimer: any;
 
   constructor(private api: TriageApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
-    this.api.healthCheck().subscribe({
-      next: h => {
-        this.stats[0].value = h.pipeline_ready ? '✅ Ready' : '❌ Down';
-        this.stats[1].value = h.llm_model || 'Unknown';
-        this.stats[2].value = h.environment || 'N/A';
-        this.stats[3].value = `${Math.floor(h.uptime_seconds / 60)}m`;
+    this.fetchData();
+    this.pollTimer = setInterval(() => this.fetchData(), 10000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+  }
+
+  fetchData() {
+    this.api.getPendingReviews().subscribe({
+      next: (res: any) => {
+        this.pendingCount = (res.sessions || []).length;
         this.cdr.markForCheck();
-      },
-      error: () => { /* backend might be down, show defaults */ }
+      }
+    });
+
+    this.api.getAppointments().subscribe({
+      next: (res: any) => {
+        this.appointmentsCount = (res.appointments || []).length;
+        this.cdr.markForCheck();
+      }
     });
   }
 }
