@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from src.config import settings
 
-DB_PATH = Path(settings.data_dir) / "appointments.db"
+DB_PATH = Path("./data/appointments.db")
 
 def init_db():
     """Initialize the SQLite database for appointments."""

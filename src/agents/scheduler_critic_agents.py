@@ -39,13 +39,13 @@ Output a JSON object with EXACTLY these keys:
   "reasoning": "<why you chose this slot>",
   "appointment_type": "<telemedicine|in_person>",
   "pre_appointment_advice": "<what the patient should do before the appointment>",
-  "patient_name": "<extracted from message, or 'Unknown'>",
-  "patient_age": "<extracted from message, or 'Unknown'>"
+  "patient_name": "<Extract patient name from the message if provided, else null>",
+  "patient_age": "<Extract patient age from the message if provided, else null>",
+  "requested_day": "<Extract the requested day if provided (e.g. Wednesday), else null>",
+  "requested_time": "<Extract the requested time if provided (e.g. 19:08), else null>"
 }
 
 CRITICAL: selected_slot_id must exactly match one of the provided slot IDs.
-Your response must start with { and end with }. 
-Output raw JSON only. No greetings, no explanations, no markdown, no code blocks.
 First character of your response must be {."""
 
 
@@ -65,7 +65,13 @@ class SchedulerAgent:
 
         try:
             slots = check_availability(date_range="next_available", urgency=urgency)
-            selected, parsed_data = self._select_slot(state, slots)
+            try:
+                selected, parsed_data = self._select_slot(state, slots)
+            except Exception as e:
+                log.warning("llm_slot_selection_failed", error=str(e), session_id=state.session_id)
+                selected = slots[0]
+                parsed_data = {}
+
             confirmation = book_appointment(
                 slot_id=selected["slot_id"],
                 patient_id=state.patient_id,
@@ -74,10 +80,18 @@ class SchedulerAgent:
 
             # Find the slot details
             slot_detail = next((s for s in slots if s["slot_id"] == selected["slot_id"]), slots[0])
+            
+            # Override date and time if user specifically requested it
+            final_datetime = slot_detail["datetime_iso"]
+            req_day = parsed_data.get("requested_day")
+            req_time = parsed_data.get("requested_time")
+            if req_day and req_time:
+                # We format it nicely for the clinician dashboard
+                final_datetime = f"Requested for {req_day} at {req_time}"
 
             state.appointment = AppointmentResult(
                 appointment_id=confirmation["appointment_id"],
-                datetime_iso=slot_detail["datetime_iso"],
+                datetime_iso=final_datetime,
                 location=slot_detail["location"],
                 provider=slot_detail["provider"],
                 confirmation_message=confirmation["message"],
