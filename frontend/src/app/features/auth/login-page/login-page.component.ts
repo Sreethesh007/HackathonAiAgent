@@ -78,35 +78,36 @@ import { NotificationService } from '../../../core/services/notification.service
   styles: [`
     .login-wrapper {
       min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      position: relative; overflow: hidden; background: #0a0e1a;
+      position: relative; overflow: hidden; background: #f4f7fb;
     }
     .login-bg {
       position: absolute; inset: 0; pointer-events: none;
-      background: radial-gradient(ellipse at 20% 50%, hsla(211,100%,28%,0.25) 0%, transparent 60%),
-                  radial-gradient(ellipse at 80% 20%, hsla(175,80%,28%,0.2) 0%, transparent 50%);
+      background: radial-gradient(ellipse at 20% 50%, rgba(0,150,136,0.1) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 20%, rgba(38,166,154,0.1) 0%, transparent 50%);
     }
     .login-card {
       width: 420px; max-width: 95vw;
-      background: #111827 !important; border: 1px solid rgba(255,255,255,0.08) !important;
+      background: #ffffff !important; border: 1px solid #e8edf2 !important;
       border-radius: 20px !important; padding: 8px;
-      box-shadow: 0 24px 80px rgba(0,0,0,0.5) !important;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.08) !important;
       position: relative; z-index: 1;
     }
     .login-logo { text-align: center; padding: 28px 16px 8px; }
-    .logo-icon { font-size: 48px; width: 48px; height: 48px; color: #6366f1; display: block; margin: 0 auto 8px; }
-    .logo-title { margin: 0 0 4px; font-size: 1.6rem; font-weight: 700; color: #f1f5f9; }
-    .logo-sub   { margin: 0; font-size: 0.85rem; color: #94a3b8; }
+    .logo-icon { font-size: 48px; width: 48px; height: 48px; color: #009688; display: block; margin: 0 auto 8px; }
+    .logo-title { margin: 0 0 4px; font-size: 1.6rem; font-weight: 700; color: #212121; }
+    .logo-sub   { margin: 0; font-size: 0.85rem; color: #616161; }
     .login-form { display: flex; flex-direction: column; gap: 12px; padding: 8px 0; }
     .full-w { width: 100%; }
     .role-hint {
       display: flex; align-items: center; gap: 8px;
       padding: 10px 14px; border-radius: 8px;
-      background: rgba(99,102,241,0.1); color: #94a3b8; font-size: 0.8rem;
+      background: rgba(0,150,136,0.1); color: #616161; font-size: 0.8rem;
     }
-    .role-hint mat-icon { font-size: 16px; width: 16px; height: 16px; color: #6366f1; }
+    .role-hint mat-icon { font-size: 16px; width: 16px; height: 16px; color: #009688; }
     .login-btn {
       height: 48px; font-size: 1rem; font-weight: 600;
       display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: #009688 !important; color: #ffffff !important;
     }
   `]
 })

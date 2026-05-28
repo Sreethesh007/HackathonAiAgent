@@ -8,7 +8,7 @@ import { AuthService } from '../../../core/services/auth.service';
   imports: [RouterOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="shell"><router-outlet /></div>`,
-  styles: [`.shell { height: 100vh; background: #0a0e1a; }`]
+  styles: [`.shell { height: 100vh; background: #f4f7fb; }`]
 })
 export class PatientShellComponent {
   constructor(public auth: AuthService) {}
