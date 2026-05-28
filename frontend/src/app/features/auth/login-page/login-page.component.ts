@@ -45,7 +45,7 @@ import { NotificationService } from '../../../core/services/notification.service
               <mat-label>Username</mat-label>
               <mat-icon matPrefix>person</mat-icon>
               <input matInput formControlName="username" id="username" autocomplete="username">
-              <mat-error>Username is required</mat-error>
+              <mat-error><strong>Username is required</strong></mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-w">
@@ -56,17 +56,11 @@ import { NotificationService } from '../../../core/services/notification.service
               <button mat-icon-button matSuffix type="button" (click)="hide = !hide">
                 <mat-icon>{{ hide ? 'visibility_off' : 'visibility' }}</mat-icon>
               </button>
-              <mat-error>Password is required</mat-error>
+              <mat-error><strong>Password is required</strong></mat-error>
             </mat-form-field>
-
-            <div class="role-hint">
-              <mat-icon>info</mat-icon>
-              <span>Use <strong>patient</strong> / <strong>clinician</strong> as username &amp; any password (dev mode)</span>
-            </div>
 
             <button mat-raised-button color="primary" type="submit" id="loginBtn"
                     [disabled]="form.invalid || loading" class="login-btn">
-              <mat-icon *ngIf="!loading">login</mat-icon>
               <mat-progress-spinner *ngIf="loading" mode="indeterminate" [diameter]="20" color="accent"></mat-progress-spinner>
               {{ loading ? 'Signing in…' : 'Sign In' }}
             </button>
@@ -75,41 +69,256 @@ import { NotificationService } from '../../../core/services/notification.service
       </mat-card>
     </div>
   `,
-  styles: [`
-    .login-wrapper {
-      min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      position: relative; overflow: hidden; background: #f4f7fb;
-    }
-    .login-bg {
-      position: absolute; inset: 0; pointer-events: none;
-      background: radial-gradient(ellipse at 20% 50%, rgba(0,150,136,0.1) 0%, transparent 60%),
-                  radial-gradient(ellipse at 80% 20%, rgba(38,166,154,0.1) 0%, transparent 50%);
-    }
+styles: [`
+  .login-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    background: #eef2f5;
+  }
+
+  .login-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        ellipse at 20% 50%,
+        rgba(0,150,136,0.08) 0%,
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse at 80% 20%,
+        rgba(38,166,154,0.06) 0%,
+        transparent 50%
+      );
+  }
+
+  .login-card {
+    width: 420px;
+    max-width: 95vw;
+    background: #ffffff !important;
+    border: 1px solid #dbe3ea !important;
+    border-radius: 22px !important;
+    padding: 12px;
+    position: relative;
+    z-index: 1;
+
+    box-shadow:
+      0 10px 30px rgba(0,0,0,0.08),
+      0 4px 12px rgba(0,0,0,0.04) !important;
+
+    backdrop-filter: blur(6px);
+  }
+
+  .login-logo {
+    text-align: center;
+    padding: 28px 18px 14px;
+  }
+
+  .logo-icon {
+    font-size: 50px;
+    width: 50px;
+    height: 50px;
+    color: #00897b;
+    display: block;
+    margin: 0 auto 10px;
+  }
+
+  .logo-title {
+    margin: 0 0 6px;
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: #1f2937;
+    letter-spacing: 0.2px;
+  }
+
+  .logo-sub {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #5f6b7a;
+    font-weight: 400;
+  }
+
+  .login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 12px 4px 8px;
+  }
+
+  .full-w {
+    width: 100%;
+  }
+
+  /* Form field spacing */
+  ::ng-deep .mat-mdc-form-field {
+    margin-bottom: 2px;
+  }
+
+  /* Input wrapper */
+  ::ng-deep .mat-mdc-text-field-wrapper {
+    background: #f8fafc !important;
+    border-radius: 14px !important;
+    transition: all 0.25s ease;
+  }
+
+  /* REMOVE weird line issue */
+  ::ng-deep .mat-mdc-form-field-flex {
+    align-items: center !important;
+  }
+
+  ::ng-deep .mat-mdc-form-field-icon-prefix {
+    padding-right: 6px !important;
+    color: #54606e !important;
+  }
+
+  ::ng-deep .mat-mdc-form-field-infix {
+    padding-left: 4px !important;
+  }
+
+  /* Placeholder */
+  ::ng-deep input::placeholder {
+    color: #7a7a7a !important;
+    opacity: 1 !important;
+  }
+
+  /* Input text */
+  ::ng-deep .mat-mdc-input-element {
+    color: #1f2937 !important;
+    font-size: 0.96rem;
+    caret-color: #009688 !important;
+  }
+
+  /* Labels */
+  ::ng-deep .mdc-floating-label {
+    color: #5f6b7a !important;
+    font-weight: 500;
+  }
+
+  /* Icons */
+  ::ng-deep .mat-mdc-form-field-icon-prefix mat-icon,
+  ::ng-deep .mat-mdc-form-field-icon-suffix mat-icon {
+    color: #54606e !important;
+  }
+
+  /* Default border */
+  ::ng-deep .mdc-notched-outline__leading,
+  ::ng-deep .mdc-notched-outline__notch,
+  ::ng-deep .mdc-notched-outline__trailing {
+    border-color: #cfd8e3 !important;
+    transition: border-color 0.25s ease;
+  }
+
+  /* Remove unwanted vertical outline artifact before prefix icons */
+  ::ng-deep .mat-mdc-form-field .mdc-notched-outline__notch {
+    border-left: none !important;
+  }
+
+  /* Remove notch artifact */
+  ::ng-deep .mdc-text-field--outlined .mdc-notched-outline__notch {
+    border-right: none !important;
+  }
+
+  /* Focus border */
+  ::ng-deep .mat-focused .mdc-notched-outline__leading,
+  ::ng-deep .mat-focused .mdc-notched-outline__notch,
+  ::ng-deep .mat-focused .mdc-notched-outline__trailing {
+    border-color: #009688 !important;
+    border-width: 2px !important;
+  }
+
+  /* Error border */
+  ::ng-deep .mat-mdc-form-field.mat-form-field-invalid .mdc-notched-outline__leading,
+  ::ng-deep .mat-mdc-form-field.mat-form-field-invalid .mdc-notched-outline__notch,
+  ::ng-deep .mat-mdc-form-field.mat-form-field-invalid .mdc-notched-outline__trailing {
+    border-color: #e53935 !important;
+  }
+
+  /* Hover */
+  ::ng-deep .mat-mdc-text-field-wrapper:hover {
+    background: #f1f5f9 !important;
+  }
+
+  .role-hint {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 12px 14px;
+    border-radius: 12px;
+
+    background: rgba(0,150,136,0.08);
+
+    color: #4b5563;
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+
+  .role-hint mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+    color: #009688;
+  }
+
+  .login-btn {
+    height: 50px;
+    font-size: 1rem;
+    font-weight: 600;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    border-radius: 14px !important;
+
+    background: #009688 !important;
+    color: #ffffff !important;
+
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      background 0.2s ease !important;
+
+    box-shadow: 0 6px 18px rgba(0,150,136,0.25);
+  }
+
+  .login-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    background: #00897b !important;
+    box-shadow: 0 10px 22px rgba(0,150,136,0.3);
+  }
+
+  .login-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  mat-error {
+    font-size: 0.78rem;
+    margin-top: 4px;
+  }
+
+  @media (max-width: 480px) {
     .login-card {
-      width: 420px; max-width: 95vw;
-      background: #ffffff !important; border: 1px solid #e8edf2 !important;
-      border-radius: 20px !important; padding: 8px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.08) !important;
-      position: relative; z-index: 1;
+      padding: 8px;
+      border-radius: 18px !important;
     }
-    .login-logo { text-align: center; padding: 28px 16px 8px; }
-    .logo-icon { font-size: 48px; width: 48px; height: 48px; color: #009688; display: block; margin: 0 auto 8px; }
-    .logo-title { margin: 0 0 4px; font-size: 1.6rem; font-weight: 700; color: #212121; }
-    .logo-sub   { margin: 0; font-size: 0.85rem; color: #616161; }
-    .login-form { display: flex; flex-direction: column; gap: 12px; padding: 8px 0; }
-    .full-w { width: 100%; }
-    .role-hint {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 14px; border-radius: 8px;
-      background: rgba(0,150,136,0.1); color: #616161; font-size: 0.8rem;
+
+    .logo-title {
+      font-size: 1.4rem;
     }
-    .role-hint mat-icon { font-size: 16px; width: 16px; height: 16px; color: #009688; }
-    .login-btn {
-      height: 48px; font-size: 1rem; font-weight: 600;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      background: #009688 !important; color: #ffffff !important;
+
+    .login-form {
+      gap: 16px;
     }
-  `]
+  }
+`]
 })
 export class LoginPageComponent implements OnInit {
   form!: FormGroup;

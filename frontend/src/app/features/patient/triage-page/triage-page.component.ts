@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, ViewChil
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TriageApiService } from '../../../core/services/triage-api.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -32,7 +33,7 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
 @Component({
   selector: 'app-triage-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="app-layout">
@@ -155,24 +156,33 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
   <!-- Footer -->
 <div class="sidebar-footer" *ngIf="!sidebarCollapsed">
 
-  <div class="user-info">
+  <div class="user-row">
 
     <div class="user-avatar">
-      <mat-icon>account_circle</mat-icon>
+      {{ patientInitials }}
     </div>
 
-    <span class="user-name">
-      {{ auth.currentUsername() }}
-    </span>
+    <div class="user-info">
+      <span class="user-name">
+  {{
+    (auth.currentUsername() || '').charAt(0).toUpperCase() +
+    (auth.currentUsername() || '').slice(1)
+  }}
+      </span>
+      <br>
+      <span class="user-role">
+        Patient
+      </span>
+    </div>
 
   </div>
 
   <button
     class="logout-btn"
     (click)="auth.logout()"
-    title="Sign out">
+    matTooltip="Sign out">
 
-    <mat-icon>logout</mat-icon>
+    Log Out
 
   </button>
 
@@ -583,52 +593,71 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
 
 /* Footer */
 .sidebar-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 12px;
-  border-top: 1px solid rgba(255,255,255,0.14);
+  padding: 18px;
+  border-top: 1px solid rgba(255,255,255,0.12);
   flex-shrink: 0;
 }
 
-.user-info {
+.user-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 0;
+  gap: 12px;
 }
 
-.user-avatar mat-icon {
-  font-size: 28px;
-  width: 28px;
-  height: 28px;
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.16);
+  border: 2px solid rgba(255,255,255,0.24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .user-name {
-  font-size: 0.85rem;
-  font-weight: 500;
   color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.user-role {
+  margin-top: 2px;
+  color: rgba(255,255,255,0.72);
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .logout-btn {
-  background: none;
+  width: 100%;
+  margin-top: 16px;
+  height: 42px;
   border: none;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.14);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  padding: 6px;
-  border-radius: 6px;
-  color: rgba(255,255,255,0.82);
-  transition: color 0.2s, background 0.2s;
-  display: flex;
-  align-items: center;
+  transition:
+    background 180ms ease,
+    transform 180ms ease;
 }
 
 .logout-btn:hover {
-  color: #ffffff;
   background: rgba(255,255,255,0.22);
+  transform: translateY(-1px);
+}
+
+.shell-layout.sidebar-collapsed .user-row,
+.shell-layout.sidebar-collapsed .logout-btn {
+  display: none;
 }
 
     /* ── Main Chat ──────────────────────────────────────────────── */
@@ -961,6 +990,18 @@ export class TriagePageComponent implements OnInit {
     public auth: AuthService,
     private cdr: ChangeDetectorRef
   ) { }
+
+  get patientInitials(): string {
+    const name = this.auth.currentUsername() ?? '';
+    const parts = name.replace(/[-_.]/g, ' ').split(' ').filter(Boolean);
+    if (parts.length === 0) {
+      return 'P';
+    }
+    return parts
+      .slice(0, 2)
+      .map((part) => part[0].toUpperCase())
+      .join('');
+  }
 
   ngOnInit() { this.fetchSessions(); }
 
