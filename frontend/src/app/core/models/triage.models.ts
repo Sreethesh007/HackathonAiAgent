@@ -44,6 +44,10 @@ export interface SessionStatusResponse {
   urgency_level?: UrgencyLevel;
   severity_score?: number;
   iteration_count?: number;
+  patient_name?: string;
+  patient_age?: string;
+  primary_concern?: string;
+  final_response?: string;
 }
 
 export interface HealthResponse {

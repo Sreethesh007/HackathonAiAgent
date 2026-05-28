@@ -208,7 +208,6 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
             <div class="welcome-chips">
               <span class="welcome-chip" (click)="inputText='I have a headache and fever'">🤕 Headache &amp; fever</span>
               <span class="welcome-chip" (click)="inputText='I have chest pain'">💔 Chest pain</span>
-              <span class="welcome-chip" (click)="inputText='I need to book an appointment'">📅 Book appointment</span>
             </div>
           </div>
 

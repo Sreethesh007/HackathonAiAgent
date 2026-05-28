@@ -58,6 +58,10 @@ class SessionStatusResponse(BaseModel):
     urgency_level: str
     appointment_booked: bool
     appointment_id: str | None
+    patient_name: str = ""
+    patient_age: str = ""
+    primary_concern: str = ""
+    final_response: str = ""
     created_at: str
     updated_at: str
 
