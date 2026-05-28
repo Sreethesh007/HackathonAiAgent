@@ -68,10 +68,10 @@ import { FadeInDirective } from '../../../shared/directives/fade-in.directive';
     .page-header { margin-bottom: 24px; }
     .page-title {
       display: flex; align-items: center; gap: 10px;
-      font-size: 1.4rem; font-weight: 700; color: #f1f5f9; margin: 0 0 5px;
+      font-size: 1.4rem; font-weight: 700; color: #212121; margin: 0 0 5px;
     }
-    .page-title mat-icon { color: #14b8a6; font-size: 22px; }
-    .page-sub { color: #64748b; margin: 0; font-size: 13px; }
+    .page-title mat-icon { color: #009688; font-size: 22px; }
+    .page-sub { color: #616161; margin: 0; font-size: 13px; }
 
     /* Stat grid */
     .stat-grid {
@@ -81,20 +81,20 @@ import { FadeInDirective } from '../../../shared/directives/fade-in.directive';
       margin-bottom: 24px;
     }
     .stat-card {
-      background: #111827 !important;
-      border: 1px solid rgba(255,255,255,0.07) !important;
-      border-radius: 12px !important;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.25) !important;
+      background: #ffffff !important;
+      border: 1px solid #e8edf2 !important;
+      border-radius: 16px !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04) !important;
       cursor: pointer;
       transition: all 0.3s ease;
     }
     .stat-card:hover {
-      border-color: rgba(255,255,255,0.15) !important;
-      box-shadow: 0 6px 32px rgba(0,0,0,0.35) !important;
+      border-color: rgba(0,150,136,0.3) !important;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06), 0 12px 30px rgba(0,0,0,0.06) !important;
       transform: translateY(-2px);
     }
     .stat-card:focus-visible {
-      outline: 2px solid #14b8a6;
+      outline: 2px solid #009688;
       outline-offset: 2px;
     }
     .stat-body {
@@ -126,16 +126,16 @@ import { FadeInDirective } from '../../../shared/directives/fade-in.directive';
 
     .stat-text { flex: 1; min-width: 0; }
     .stat-val { font-size: 2rem; font-weight: 700; color: #212121; line-height: 1; }
-    .stat-lbl { font-size: 12px; color: #64748b; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 500; }
+    .stat-lbl { font-size: 12px; color: #616161; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 500; }
 
     .stat-badge {
       font-size: 10px;
       font-weight: 700;
       padding: 3px 8px;
       border-radius: 20px;
-      background: rgba(239,68,68,0.12);
-      color: #f87171;
-      border: 1px solid rgba(239,68,68,0.2);
+      background: rgba(244,67,54,0.12);
+      color: #f44336;
+      border: 1px solid rgba(244,67,54,0.2);
       white-space: nowrap;
       letter-spacing: 0.3px;
       text-transform: uppercase;
@@ -144,19 +144,20 @@ import { FadeInDirective } from '../../../shared/directives/fade-in.directive';
     /* Info card */
     .info-section { margin-top: 8px; }
     .info-card {
-      background: #111827 !important;
-      border: 1px solid rgba(255,255,255,0.07) !important;
-      border-radius: 12px !important;
-      color: #94a3b8;
+      background: #ffffff !important;
+      border: 1px solid #e8edf2 !important;
+      border-radius: 16px !important;
+      color: #616161;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04) !important;
     }
     .info-card h3 {
       display: flex; align-items: center; gap: 8px;
       color: #212121; margin: 0 0 10px; font-size: 15px;
     }
-    .info-card h3 mat-icon { color: #3b82f6; font-size: 18px; }
+    .info-card h3 mat-icon { color: #009688; font-size: 18px; }
     .info-card p { font-size: 15px; line-height: 1.6; margin: 0 0 10px; color: #212121; }
     .info-card ul { margin: 0; padding-left: 18px; line-height: 1.7; }
-    .info-card li { margin-bottom: 6px; font-size: 13.5px; color: #212121; }
+    .info-card li { margin-bottom: 6px; font-size: 13.5px; color: #424242; }
     .info-card strong { color: #212121; }
   `]
 })
