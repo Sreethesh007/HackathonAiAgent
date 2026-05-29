@@ -8,6 +8,9 @@ on:
     branches: [main]
     paths: ['frontend/**']
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build-test:
     name: Build & Test
@@ -31,7 +34,7 @@ jobs:
         run: npm ci
 
       - name: Run unit tests
-        run: npx ng test --watch=false --browsers=ChromeHeadless
+        run: npx ng test --watch=false
 
       - name: Production build
         run: npx ng build --configuration production
