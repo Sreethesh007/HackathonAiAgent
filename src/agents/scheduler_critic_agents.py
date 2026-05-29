@@ -39,8 +39,6 @@ Output a JSON object with EXACTLY these keys:
   "reasoning": "<why you chose this slot>",
   "appointment_type": "<telemedicine|in_person>",
   "pre_appointment_advice": "<what the patient should do before the appointment>",
-  "patient_name": "<extract name from message, or null>",
-  "patient_age": "<extract age from message, or null>",
   "requested_datetime_iso": "<if the user explicitly requested a specific date/time, provide it in ISO8601 format (e.g. 2026-06-04T12:00:00). If it is a past date, output null. If not requested, output null>"
 }
 
@@ -79,17 +77,33 @@ class SchedulerAgent:
 
             # Find the slot details
             slot_detail = next((s for s in slots if s["slot_id"] == selected["slot_id"]), slots[0])
-            
+
+            # Prefer parsing the exact date/time from the frontend's standardized sentence:
+            # "Yes, please book an appointment for 2026-06-06 at 03:00 PM."
             final_datetime = slot_detail["datetime_iso"]
-            req_dt = parsed_data.get("requested_datetime_iso")
-            if req_dt:
+            import re as _re
+            from datetime import datetime as _dt
+            # Match e.g. "2026-06-06 at 03:00 PM"
+            iso_tag = _re.search(r'appointment for (\d{4}-\d{2}-\d{2}) at (\d{1,2}:\d{2}\s*(?:AM|PM))', state.current_input, _re.IGNORECASE)
+            if iso_tag:
                 try:
-                    from datetime import datetime
-                    req_dt_parsed = datetime.fromisoformat(req_dt.replace("Z", "+00:00"))
-                    if req_dt_parsed > datetime.utcnow():
-                        final_datetime = req_dt_parsed.isoformat()
+                    date_str, time_str = iso_tag.groups()
+                    parsed = _dt.strptime(f"{date_str} {time_str.strip()}", "%Y-%m-%d %I:%M %p")
+                    if parsed > _dt.utcnow():
+                        final_datetime = parsed.isoformat()
+                        state.add_trace(f"SCHEDULER: Using patient-requested datetime={final_datetime}")
                 except Exception:
                     pass
+            else:
+                # Fallback: try the LLM-extracted field
+                req_dt = parsed_data.get("requested_datetime_iso")
+                if req_dt:
+                    try:
+                        req_dt_parsed = _dt.fromisoformat(req_dt.replace("Z", "+00:00").split("+")[0])
+                        if req_dt_parsed > _dt.utcnow():
+                            final_datetime = req_dt_parsed.isoformat()
+                    except Exception:
+                        pass
 
             state.appointment = AppointmentResult(
                 appointment_id=confirmation["appointment_id"],
@@ -98,8 +112,9 @@ class SchedulerAgent:
                 provider=slot_detail["provider"],
                 confirmation_message=confirmation["message"],
                 booked=True,
-                patient_name=parsed_data.get("patient_name") or "Unknown",
-                patient_age=str(parsed_data.get("patient_age") or "Unknown")
+                patient_name=state.patient_name or parsed_data.get("patient_name") or "Unknown",
+                patient_age=state.patient_age or str(parsed_data.get("patient_age") or "Unknown"),
+                patient_gender=state.patient_gender,
             )
             state.offer_appointment = False  # Clear flag so we don't ask again
             state.add_message(

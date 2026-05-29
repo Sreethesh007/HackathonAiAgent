@@ -212,6 +212,9 @@ class HealthcareTriageGraph:
         message: str,
         session_id: str | None = None,
         max_iterations: int | None = None,
+        patient_name: str = "",
+        patient_age: str = "",
+        patient_gender: str = "",
     ) -> AgentState:
         """
         Run a full triage flow for one patient message.
@@ -235,6 +238,9 @@ class HealthcareTriageGraph:
         if current and current.values:
             state = _dict_to_state(current.values)
             state.current_input = message
+            state.patient_name = patient_name or state.patient_name
+            state.patient_age = patient_age or state.patient_age
+            state.patient_gender = patient_gender or state.patient_gender
             state.add_message("user", message)
             if max_iterations:
                 state.max_iterations = max_iterations
@@ -244,6 +250,9 @@ class HealthcareTriageGraph:
         else:
             state = AgentState(
                 patient_id=patient_id,
+                patient_name=patient_name,
+                patient_age=patient_age,
+                patient_gender=patient_gender,
                 current_input=message,
                 max_iterations=max_iterations or settings.max_agent_iterations,
             )
@@ -289,6 +298,9 @@ class HealthcareTriageGraph:
         message: str,
         session_id: str | None = None,
         max_iterations: int | None = None,
+        patient_name: str = "",
+        patient_age: str = "",
+        patient_gender: str = "",
     ):
         """Async generator for streaming LLM tokens and metadata."""
         import uuid
@@ -301,6 +313,9 @@ class HealthcareTriageGraph:
         if current and current.values:
             state = _dict_to_state(current.values)
             state.current_input = message
+            state.patient_name = patient_name or state.patient_name
+            state.patient_age = patient_age or state.patient_age
+            state.patient_gender = patient_gender or state.patient_gender
             state.add_message("user", message)
             if max_iterations:
                 state.max_iterations = max_iterations
@@ -310,6 +325,9 @@ class HealthcareTriageGraph:
         else:
             state = AgentState(
                 patient_id=patient_id,
+                patient_name=patient_name,
+                patient_age=patient_age,
+                patient_gender=patient_gender,
                 current_input=message,
                 max_iterations=max_iterations or settings.max_agent_iterations,
             )
