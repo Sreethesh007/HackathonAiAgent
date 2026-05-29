@@ -39,10 +39,9 @@ Output a JSON object with EXACTLY these keys:
   "reasoning": "<why you chose this slot>",
   "appointment_type": "<telemedicine|in_person>",
   "pre_appointment_advice": "<what the patient should do before the appointment>",
-  "patient_name": "<Extract patient name from the message if provided, else null>",
-  "patient_age": "<Extract patient age from the message if provided, else null>",
-  "requested_day": "<Extract the requested day if provided (e.g. Wednesday), else null>",
-  "requested_time": "<Extract the requested time if provided (e.g. 19:08), else null>"
+  "patient_name": "<extract name from message, or null>",
+  "patient_age": "<extract age from message, or null>",
+  "requested_datetime_iso": "<if the user explicitly requested a specific date/time, provide it in ISO8601 format (e.g. 2026-06-04T12:00:00). If it is a past date, output null. If not requested, output null>"
 }
 
 CRITICAL: selected_slot_id must exactly match one of the provided slot IDs.
@@ -81,13 +80,16 @@ class SchedulerAgent:
             # Find the slot details
             slot_detail = next((s for s in slots if s["slot_id"] == selected["slot_id"]), slots[0])
             
-            # Override date and time if user specifically requested it
             final_datetime = slot_detail["datetime_iso"]
-            req_day = parsed_data.get("requested_day")
-            req_time = parsed_data.get("requested_time")
-            if req_day and req_time:
-                # We format it nicely for the clinician dashboard
-                final_datetime = f"Requested for {req_day} at {req_time}"
+            req_dt = parsed_data.get("requested_datetime_iso")
+            if req_dt:
+                try:
+                    from datetime import datetime
+                    req_dt_parsed = datetime.fromisoformat(req_dt.replace("Z", "+00:00"))
+                    if req_dt_parsed > datetime.utcnow():
+                        final_datetime = req_dt_parsed.isoformat()
+                except Exception:
+                    pass
 
             state.appointment = AppointmentResult(
                 appointment_id=confirmation["appointment_id"],
@@ -96,9 +98,10 @@ class SchedulerAgent:
                 provider=slot_detail["provider"],
                 confirmation_message=confirmation["message"],
                 booked=True,
-                patient_name=parsed_data.get("patient_name", "Unknown"),
-                patient_age=str(parsed_data.get("patient_age", "Unknown"))
+                patient_name=parsed_data.get("patient_name") or "Unknown",
+                patient_age=str(parsed_data.get("patient_age") or "Unknown")
             )
+            state.offer_appointment = False  # Clear flag so we don't ask again
             state.add_message(
                 "agent",
                 f"Appointment booked: {confirmation['appointment_id']} with {slot_detail['provider']}",
@@ -123,10 +126,11 @@ class SchedulerAgent:
     def _select_slot(self, state: AgentState, slots: list[dict]) -> tuple[dict, dict]:
         """LLM selects the best slot; falls back to first slot on parse error."""
         slots_text = json.dumps(slots, indent=2)
+        conversation = "\n".join([f"{msg.role}: {msg.content}" for msg in state.messages])
         prompt = (
             f"Urgency level: {state.triage.urgency_level}\n"
             f"Primary concern: {state.triage.primary_concern}\n"
-            f"Patient message: {state.current_input[:200]}\n\n"
+            f"Patient conversation:\n{conversation}\n\n"
             f"Available slots:\n{slots_text}\n\n"
             "Select the best slot and return JSON."
         )

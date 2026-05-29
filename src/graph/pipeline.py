@@ -226,24 +226,37 @@ class HealthcareTriageGraph:
             Final AgentState with populated triage, research, appointment, and final_response.
         """
         import uuid
+        from src.agent_state import FlowStatus
 
-        initial_state = AgentState(
-            patient_id=patient_id,
-            current_input=message,
-            max_iterations=max_iterations or settings.max_agent_iterations,
-        )
-        if session_id:
-            initial_state.session_id = session_id
+        new_session_id = session_id or str(uuid.uuid4())
+        config = {"configurable": {"thread_id": new_session_id}}
+        current = self._graph.get_state(config)
 
-        initial_state.add_message("user", message)
+        if current and current.values:
+            state = _dict_to_state(current.values)
+            state.current_input = message
+            state.add_message("user", message)
+            if max_iterations:
+                state.max_iterations = max_iterations
+            state.flow_status = FlowStatus.RUNNING
+            state.next_agent = None
+            state.final_response = ""
+        else:
+            state = AgentState(
+                patient_id=patient_id,
+                current_input=message,
+                max_iterations=max_iterations or settings.max_agent_iterations,
+            )
+            state.session_id = new_session_id
+            state.add_message("user", message)
+
         log.info(
             "pipeline_start",
-            session_id=initial_state.session_id,
+            session_id=state.session_id,
             patient_id=patient_id,   # redacted in production
         )
 
-        config = {"configurable": {"thread_id": initial_state.session_id}}
-        result_dict = self._graph.invoke(_state_to_dict(initial_state), config=config)
+        result_dict = self._graph.invoke(_state_to_dict(state), config=config)
         return _dict_to_state(result_dict)
 
     def resume(self, session_id: str, human_approved: bool) -> AgentState:
@@ -279,27 +292,37 @@ class HealthcareTriageGraph:
     ):
         """Async generator for streaming LLM tokens and metadata."""
         import uuid
+        from src.agent_state import FlowStatus
 
-        initial_state = AgentState(
-            patient_id=patient_id,
-            current_input=message,
-            max_iterations=max_iterations or settings.max_agent_iterations,
-        )
-        if session_id:
-            initial_state.session_id = session_id
+        new_session_id = session_id or str(uuid.uuid4())
+        config = {"configurable": {"thread_id": new_session_id}}
+        current = self._graph.get_state(config)
+
+        if current and current.values:
+            state = _dict_to_state(current.values)
+            state.current_input = message
+            state.add_message("user", message)
+            if max_iterations:
+                state.max_iterations = max_iterations
+            state.flow_status = FlowStatus.RUNNING
+            state.next_agent = None
+            state.final_response = ""
         else:
-            session_id = initial_state.session_id
+            state = AgentState(
+                patient_id=patient_id,
+                current_input=message,
+                max_iterations=max_iterations or settings.max_agent_iterations,
+            )
+            state.session_id = new_session_id
+            state.add_message("user", message)
 
-        initial_state.add_message("user", message)
         log.info(
             "pipeline_astream_start",
-            session_id=session_id,
+            session_id=state.session_id,
             patient_id=patient_id,
         )
 
-        config = {"configurable": {"thread_id": session_id}}
-        
-        async for event in self._graph.astream_events(_state_to_dict(initial_state), config=config, version="v2"):
+        async for event in self._graph.astream_events(_state_to_dict(state), config=config, version="v2"):
             yield event
 
     async def astream_resume(self, session_id: str, human_approved: bool):

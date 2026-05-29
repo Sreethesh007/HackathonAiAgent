@@ -12,13 +12,17 @@ import { trigger, transition, style, animate } from '@angular/animations';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { RouterModule } from '@angular/router';
+
 @Component({
   selector: 'app-login-page',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule,
+    CommonModule, ReactiveFormsModule, RouterModule,
     MatCardModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatIconModule, MatProgressSpinnerModule
+    MatButtonModule, MatIconModule, MatProgressSpinnerModule,
+    MatCheckboxModule
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [
@@ -42,10 +46,10 @@ import { NotificationService } from '../../../core/services/notification.service
         <mat-card-content>
           <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
             <mat-form-field appearance="outline" class="full-w">
-              <mat-label>Username</mat-label>
-              <mat-icon matPrefix>person</mat-icon>
-              <input matInput formControlName="username" id="username" autocomplete="username">
-              <mat-error><strong>Username is required</strong></mat-error>
+              <mat-label>Email</mat-label>
+              <mat-icon matPrefix>email</mat-icon>
+              <input matInput formControlName="email" id="email" type="email" autocomplete="email">
+              <mat-error><strong>Valid email is required</strong></mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-w">
@@ -59,11 +63,19 @@ import { NotificationService } from '../../../core/services/notification.service
               <mat-error><strong>Password is required</strong></mat-error>
             </mat-form-field>
 
+            <div class="form-actions">
+              <mat-checkbox formControlName="rememberMe">Remember me</mat-checkbox>
+              <a routerLink="/forgot-password" class="forgot-link">Forgot password?</a>
+            </div>
+
             <button mat-raised-button color="primary" type="submit" id="loginBtn"
                     [disabled]="form.invalid || loading" class="login-btn">
               <mat-progress-spinner *ngIf="loading" mode="indeterminate" [diameter]="20" color="accent"></mat-progress-spinner>
               {{ loading ? 'Signing in…' : 'Sign In' }}
             </button>
+            <div class="signup-prompt">
+              Don't have an account? <a routerLink="/signup">Sign up</a>
+            </div>
           </form>
         </mat-card-content>
       </mat-card>
@@ -265,6 +277,24 @@ styles: [`
     color: #009688;
   }
 
+  .form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 4px;
+  }
+
+  .forgot-link {
+    color: #009688;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .forgot-link:hover {
+    text-decoration: underline;
+  }
+
   .login-btn {
     height: 50px;
     font-size: 1rem;
@@ -297,6 +327,23 @@ styles: [`
   .login-btn:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+  }
+
+  .signup-prompt {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #5f6b7a;
+    margin-top: 8px;
+  }
+
+  .signup-prompt a {
+    color: #009688;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .signup-prompt a:hover {
+    text-decoration: underline;
   }
 
   mat-error {
@@ -336,23 +383,28 @@ export class LoginPageComponent implements OnInit {
   ngOnInit(): void {
     if (this.auth.isAuthenticated()) this.redirect();
     this.form = this.fb.group({
-      username: ['', Validators.required],
-      password: ['', Validators.required]
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', Validators.required],
+      rememberMe: [false]
     });
   }
 
-  submit(): void {
+  async submit(): Promise<void> {
     if (this.form.invalid) return;
     this.loading = true;
     this.cdr.markForCheck();
-    this.auth.login(this.form.value).subscribe({
-      next: () => this.redirect(),
-      error: err => {
-        this.loading = false;
-        this.cdr.markForCheck();
-        this.notify.error(err?.error?.detail ?? 'Login failed');
-      }
-    });
+    
+    const { email, password, rememberMe } = this.form.value;
+
+    try {
+      await this.auth.signIn(email, password);
+      // Supabase handles session persistence based on its storage configuration
+      this.redirect();
+    } catch (err: any) {
+      this.loading = false;
+      this.cdr.markForCheck();
+      this.notify.error(err.message || 'Login failed');
+    }
   }
 
   private redirect(): void {

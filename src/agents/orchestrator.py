@@ -52,9 +52,10 @@ Output a JSON object with EXACTLY these keys:
 
 CRITICAL RULES:
 - Never provide medical diagnoses yourself.
-- Always route to triage FIRST on any new patient message.
+- If an appointment was previously offered and the patient's message confirms/requests booking it (e.g. "yes", "book it"), route IMMEDIATELY to scheduler.
+- Otherwise, always route to triage FIRST on any new patient message with new symptoms.
 - If triage severity >= 8 (emergency), skip scheduler — just FINISH with emergency guidance.
-- If the critic has already reviewed and approved, route to FINISH.
+- If the critic has already reviewed and approved and no appointment booking is pending, route to FINISH.
 - Respond ONLY with valid JSON — no markdown fences, no prose outside the JSON."""
 
 
@@ -171,6 +172,7 @@ class OrchestratorAgent:
             f"Research completed: {research_done}",
             f"Critic approved: {critic_ok}",
             f"Appointment booked: {appt_booked}",
+            f"Appointment previously offered: {getattr(state, 'offer_appointment', False)}",
         ]
         if state.reasoning_trace:
             lines.append("Previous reasoning: " + "; ".join(state.reasoning_trace[-3:]))

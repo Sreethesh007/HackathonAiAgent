@@ -38,11 +38,15 @@ async def get_current_user(
     try:
         payload = jwt.decode(
             credentials.credentials,
-            settings.jwt_secret,
-            algorithms=[settings.jwt_algorithm],
+            settings.supabase_jwt_secret,
+            algorithms=["HS256"],
+            options={"verify_aud": False}
         )
         sub: str = payload.get("sub", "")
-        role: str = payload.get("role", "clinician")
+        # Supabase stores user metadata in user_metadata claim
+        user_metadata = payload.get("user_metadata", {})
+        role: str = user_metadata.get("role", "patient")
+        
         if not sub:
             raise credentials_exception
         return TokenData(sub=sub, role=role)

@@ -72,6 +72,11 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
 
+    # Supabase
+    supabase_url: str = "YOUR_SUPABASE_URL"
+    supabase_key: str = "YOUR_SUPABASE_KEY"
+    supabase_jwt_secret: str = "YOUR_SUPABASE_JWT_SECRET"
+
     # Observability
     log_level: str = "INFO"
     environment: str = "development"

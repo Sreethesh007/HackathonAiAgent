@@ -30,6 +30,7 @@ dependencies = [
     "tiktoken>=0.7",
     "pypdf>=4.2",
     "sentence-transformers>=3.0",
+    "supabase>=2.5",
 ]
 
 [project.optional-dependencies]
