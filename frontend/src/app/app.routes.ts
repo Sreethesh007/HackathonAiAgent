@@ -17,12 +17,6 @@ export const routes: Routes = [
         .then(m => m.SignupPageComponent)
   },
   {
-    path: 'verify-otp',
-    loadComponent: () =>
-      import('./features/auth/verify-otp-page/verify-otp-page.component')
-        .then(m => m.VerifyOtpPageComponent)
-  },
-  {
     path: 'forgot-password',
     loadComponent: () =>
       import('./features/auth/forgot-password-page/forgot-password-page.component')

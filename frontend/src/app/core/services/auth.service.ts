@@ -103,11 +103,6 @@ export class AuthService {
     return data;
   }
 
-  async verifyOtp(email: string, token: string, type: any = 'signup'): Promise<any> {
-    const { data, error } = await this.supabase.auth.verifyOtp({ email, token, type });
-    if (error) throw error;
-    return data;
-  }
 
   async resetPasswordForEmail(email: string): Promise<any> {
     const { data, error } = await this.supabase.auth.resetPasswordForEmail(email, {
