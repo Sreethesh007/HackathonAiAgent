@@ -38,8 +38,8 @@ export interface ContinueResponse extends TriageResponse {}
 
 export interface SessionStatusResponse {
   session_id: string;
-  status: string;
-  last_updated: string;
+  status?: string;
+  last_updated?: string;
   flow_status?: string;
   urgency_level?: UrgencyLevel;
   severity_score?: number;
@@ -48,6 +48,9 @@ export interface SessionStatusResponse {
   patient_age?: string;
   primary_concern?: string;
   final_response?: string;
+  requires_human_review?: boolean;
+  appointment_booked?: boolean;
+  appointment_id?: string | null;
 }
 
 export interface HealthResponse {

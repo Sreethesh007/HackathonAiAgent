@@ -49,6 +49,13 @@ import { FadeInDirective } from '../../../shared/directives/fade-in.directive';
               </td>
             </ng-container>
 
+            <ng-container matColumnDef="gender">
+              <th mat-header-cell *matHeaderCellDef>Gender</th>
+              <td mat-cell *matCellDef="let row">
+                <span class="age-value">{{ row.gender || '—' }}</span>
+              </td>
+            </ng-container>
+
             <ng-container matColumnDef="clinician">
               <th mat-header-cell *matHeaderCellDef>Clinician</th>
               <td mat-cell *matCellDef="let row">{{ row.provider }}</td>
@@ -233,7 +240,7 @@ import { FadeInDirective } from '../../../shared/directives/fade-in.directive';
 })
 export class AppointmentsPageComponent implements OnInit {
   appointments: any[] = [];
-  displayedColumns: string[] = ['date', 'patient', 'age', 'clinician', 'location', 'reason'];
+  displayedColumns: string[] = ['date', 'patient', 'age', 'gender', 'clinician', 'location', 'reason'];
 
   constructor(private api: TriageApiService, private cdr: ChangeDetectorRef) {}
 

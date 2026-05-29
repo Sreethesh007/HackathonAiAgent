@@ -73,12 +73,12 @@ import { NotificationService } from '../../../core/services/notification.service
 
             <div class="row">
               <mat-form-field appearance="outline" class="half-w">
-                <mat-label>Weight (kg) - Optional</mat-label>
+                <mat-label>Weight (kg)</mat-label>
                 <input matInput formControlName="weight" type="number">
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="half-w">
-                <mat-label>Height (cm) - Optional</mat-label>
+                <mat-label>Height (cm)</mat-label>
                 <input matInput formControlName="height" type="number">
               </mat-form-field>
             </div>
@@ -132,8 +132,8 @@ export class SignupPageComponent {
       await this.auth.signUp(email, password, { 
         name, age, gender, weight, height, role: 'patient' 
       });
-      this.notify.success('Account created! Please check your email for the OTP verification code.');
-      this.router.navigate(['/verify-otp'], { queryParams: { email } });
+      this.notify.success('Check your email for the confirmation link');
+      this.router.navigate(['/login']);
     } catch (err: any) {
       this.loading = false;
       this.cdr.markForCheck();

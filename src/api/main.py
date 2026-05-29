@@ -48,7 +48,7 @@ from src.memory import KnowledgeRetriever
 from src.llm.provider import check_provider_health, get_provider_info
 from src.observability.logging import configure_logging, get_logger
 from src.observability.metrics import ACTIVE_SESSIONS, API_LATENCY, API_REQUESTS
-from src.db import init_db, add_appointment, get_all_appointments as db_get_appointments
+from src.db import init_db, add_appointment, get_all_appointments as db_get_appointments, check_slot_availability
 
 log = get_logger(__name__)
 
@@ -156,7 +156,7 @@ def _extract_node_reasoning(node: str, state_dict: dict) -> str:
     return ""
 
 
-async def event_generator(pipeline_iterator, patient_id: str, session_id: str):
+async def event_generator(pipeline_iterator, patient_id: str, session_id: str, patient_name: str = "", patient_age: str = ""):
     import json
     final_state = None
     try:
@@ -261,14 +261,16 @@ async def event_generator(pipeline_iterator, patient_id: str, session_id: str):
             appt_id = appt_data.get("appointment_id")
             if appt_id:
                 add_appointment({
-                    "appointment_id": appt_id,
-                    "datetime_iso": appt_data.get("datetime_iso"),
-                    "provider": appt_data.get("provider"),
-                    "location": appt_data.get("location"),
-                    "patient_name": appt_data.get("patient_name") or "Unknown",
-                    "patient_age": str(appt_data.get("patient_age") or "Unknown"),
-                    "reason": triage_state.get("primary_concern") or "N/A",
-                    "session_id": session_id
+                    "appointment_id":  appt_id,
+                    "datetime_iso":    appt_data.get("datetime_iso"),
+                    "provider":        appt_data.get("provider"),
+                    "location":        appt_data.get("location"),
+                    "patient_name":    patient_name or appt_data.get("patient_name") or "Unknown",
+                    "patient_age":     patient_age or str(appt_data.get("patient_age") or "Unknown"),
+                    "gender":          final_state.get("patient_gender", ""),
+                    "primary_concern": triage_state.get("primary_concern") or "N/A",
+                    "reason":          triage_state.get("primary_concern") or "N/A",
+                    "session_id":      session_id,
                 })
 
         # Track sessions that need clinician review
@@ -283,8 +285,8 @@ async def event_generator(pipeline_iterator, patient_id: str, session_id: str):
                 "urgency_level": final_state.get("triage", {}).get("urgency_level", "unknown"),
                 "appointment_booked": final_state.get("appointment", {}).get("booked", False),
                 "appointment_id": final_state.get("appointment", {}).get("appointment_id") or None,
-                "patient_name": final_state.get("appointment", {}).get("patient_name") or final_state.get("patient_name") or "Unknown",
-                "patient_age": str(final_state.get("appointment", {}).get("patient_age") or final_state.get("patient_age") or "Unknown"),
+                "patient_name": patient_name or final_state.get("patient_name") or final_state.get("appointment", {}).get("patient_name") or "Unknown",
+                "patient_age": patient_age or str(final_state.get("patient_age") or final_state.get("appointment", {}).get("patient_age") or "Unknown"),
                 "primary_concern": final_state.get("triage", {}).get("primary_concern") or "N/A",
                 "final_response": final_state.get("final_response", ""),
                 "created_at": final_state.get("created_at", ""),
@@ -507,6 +509,9 @@ async def start_triage(
     patient_id = body.patient_id or current_user.sub
     session_id = body.session_id or str(uuid.uuid4())
 
+    with open("data/debug.log", "a") as f:
+        f.write(f"Triage started by sub={current_user.sub}, name={getattr(current_user, 'name', 'ERR')}, age={getattr(current_user, 'age', 'ERR')}\n")
+
     log.info(
         "triage_request_stream",
         patient_id=patient_id,
@@ -520,9 +525,18 @@ async def start_triage(
     async def stream():
         try:
             async for chunk in event_generator(
-                _pipeline.astream_run(patient_id=patient_id, message=body.message, session_id=session_id),
+                _pipeline.astream_run(
+                    patient_id=patient_id,
+                    message=body.message,
+                    session_id=session_id,
+                    patient_name=current_user.name,
+                    patient_age=current_user.age,
+                    patient_gender=getattr(current_user, 'gender', ''),
+                ),
                 patient_id=patient_id,
-                session_id=session_id
+                session_id=session_id,
+                patient_name=current_user.name,
+                patient_age=current_user.age
             ):
                 yield chunk
         finally:
@@ -555,12 +569,25 @@ async def continue_triage(
                 _pending_review_sessions.pop(session_id, None)
                 pipeline_iterator = _pipeline.astream_resume(session_id=session_id, human_approved=body.human_approval)
             elif body.message:
-                pipeline_iterator = _pipeline.astream_run(patient_id=patient_id, message=body.message, session_id=session_id)
+                pipeline_iterator = _pipeline.astream_run(
+                    patient_id=patient_id,
+                    message=body.message,
+                    session_id=session_id,
+                    patient_name=current_user.name,
+                    patient_age=current_user.age,
+                    patient_gender=getattr(current_user, 'gender', ''),
+                )
             else:
                 yield f"data: {{\"type\": \"error\", \"content\": \"Provide either message or human_approval\"}}\n\n"
                 return
 
-            async for chunk in event_generator(pipeline_iterator, patient_id=patient_id, session_id=session_id):
+            async for chunk in event_generator(
+                pipeline_iterator,
+                patient_id=patient_id,
+                session_id=session_id,
+                patient_name=current_user.name,
+                patient_age=current_user.age
+            ):
                 yield chunk
         except Exception as exc:
             log.error("continue_pipeline_error", error=str(exc))
@@ -574,7 +601,24 @@ async def continue_triage(
 async def get_sessions(current_user: TokenData = Depends(get_current_user)):
     """Fetch all sessions for the current patient."""
     patient_id = current_user.sub
-    return {"sessions": _patient_sessions.get(patient_id, [])}
+    
+    # 1. Fetch persistent sessions from Supabase
+    db_sessions = conversation_store.get_user_sessions(patient_id)
+    
+    # 2. Merge with any active in-memory state (to get live flow_status if currently running)
+    mem_sessions = _patient_sessions.get(patient_id, [])
+    
+    # Create a merged dictionary keyed by session_id, preferring mem state for status if present
+    merged = {s["session_id"]: s for s in db_sessions}
+    for mem_s in mem_sessions:
+        sid = mem_s["session_id"]
+        if sid in merged:
+            merged[sid]["status"] = mem_s.get("status", merged[sid]["status"])
+            merged[sid]["updated_at"] = mem_s.get("updated_at", merged[sid]["updated_at"])
+        else:
+            merged[sid] = mem_s
+            
+    return {"sessions": list(merged.values())}
 
 
 # ── Conversation history (SQLite-backed) ──────────────────────────────────────
@@ -631,6 +675,22 @@ async def get_pending_reviews(current_user: TokenData = Depends(get_current_user
     For now we return all pending sessions regardless of who triggers it.
     """
     return {"sessions": list(_pending_review_sessions.values())}
+
+@app.get("/clinician/check-slot", tags=["Clinician"])
+async def check_slot(
+    datetime_iso: str,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Check whether a given datetime slot is free (no appointment within ±30 min)."""
+    try:
+        requested = datetime.fromisoformat(datetime_iso.replace("Z", "+00:00").split("+")[0])
+        if requested < datetime.utcnow():
+            return {"available": False, "reason": "Cannot book a date in the past"}
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid datetime_iso format")
+    available = check_slot_availability(datetime_iso)
+    return {"available": available}
+
 
 @app.get("/clinician/appointments", tags=["Clinician"])
 async def get_all_appointments_api(current_user: TokenData = Depends(get_current_user)):

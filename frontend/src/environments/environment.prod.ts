@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
   apiBaseUrl: '/api',
-  supabaseUrl: 'YOUR_SUPABASE_URL',
-  supabaseKey: 'YOUR_SUPABASE_ANON_KEY'
+  supabaseUrl: 'https://hlbtxijmpubeforkirvu.supabase.co',
+  supabaseKey: 'sb_publishable_PMeW3F0f3X1RsSJ4anQX0g_CKMAPwbX'
 };
