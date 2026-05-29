@@ -194,7 +194,7 @@ styles: [`
 
   /* Placeholder */
   ::ng-deep input::placeholder {
-    color: #7a7a7a !important;
+    color: #4b5563 !important;
     opacity: 1 !important;
   }
 
@@ -207,14 +207,14 @@ styles: [`
 
   /* Labels */
   ::ng-deep .mdc-floating-label {
-    color: #5f6b7a !important;
+    color: #374151 !important;
     font-weight: 500;
   }
 
   /* Icons */
   ::ng-deep .mat-mdc-form-field-icon-prefix mat-icon,
   ::ng-deep .mat-mdc-form-field-icon-suffix mat-icon {
-    color: #54606e !important;
+    color: #374151 !important;
   }
 
   /* Default border */
@@ -253,6 +253,20 @@ styles: [`
   /* Hover */
   ::ng-deep .mat-mdc-text-field-wrapper:hover {
     background: #f1f5f9 !important;
+  }
+
+  /* Checkbox / Remember me text */
+  ::ng-deep .mat-mdc-checkbox .mdc-label {
+    color: #374151 !important;
+    font-weight: 500;
+  }
+
+  /* Button label flex to center spinner and text properly */
+  ::ng-deep .mdc-button__label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
   }
 
   .role-hint {

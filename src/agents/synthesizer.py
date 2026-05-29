@@ -38,7 +38,7 @@ Guidelines:
 - For routine cases: reassure, explain scheduling, add general wellness tips
 - If `offer_appointment` is true AND `appointment` is not_booked, explicitly ask if they would like to book an appointment.
 - Keep response under 250 words.
-- CRITICAL: If an appointment IS booked, your ENTIRE response MUST be EXACTLY this phrase (fill in the variables): "Thank you for using our triage service. Your appointment has been booked on <appointment_datetime> with <provider>."
+- CRITICAL: If an appointment IS booked, your response MUST start with a warm confirmation sentence and MUST include ALL of these details exactly as given: the provider name, the location, and the appointment date/time formatted as a human-readable date (e.g. "Monday, 2 June at 10:00 AM"). Example: "Your appointment has been confirmed with Dr. A. Smith at City Medical Center — Room 101 on Monday, 2 June at 10:00 AM. Please arrive 10 minutes early and bring any relevant medical records."
 
 You will receive structured JSON — respond ONLY with the text of the message you want to send to the patient (plain prose, no JSON)."""
 
@@ -84,11 +84,21 @@ class Synthesizer:
         """Build structured context and call LLM for final response."""
         appt_section = ""
         if state.appointment.booked:
+            human_dt = state.appointment.datetime_iso
+            try:
+                from datetime import datetime
+                # Parse ISO and format as "Jun 06 at 3:00 PM"
+                dt_obj = datetime.fromisoformat(state.appointment.datetime_iso.replace("Z", "+00:00").split("+")[0])
+                human_dt = dt_obj.strftime("%b %d at %I:%M %p").replace(" 0", " ")
+            except Exception:
+                pass
+
             appt_section = (
                 f"appointment_id: {state.appointment.appointment_id}\n"
-                f"appointment_datetime: {state.appointment.datetime_iso}\n"
+                f"appointment_datetime: {human_dt}\n"
                 f"provider: {state.appointment.provider}\n"
-                f"location: {state.appointment.location}"
+                f"location: {state.appointment.location}\n"
+                f"patient_name: {state.appointment.patient_name}"
             )
 
         context = {

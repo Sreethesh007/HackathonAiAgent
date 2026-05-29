@@ -164,10 +164,7 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
 
     <div class="user-info">
       <span class="user-name">
-  {{
-    (auth.currentUsername() || '').charAt(0).toUpperCase() +
-    (auth.currentUsername() || '').slice(1)
-  }}
+  {{ auth.currentName() || 'Patient' }}
       </span>
       <br>
       <span class="user-role">
@@ -290,16 +287,18 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
             <ng-container *ngIf="showAppointmentForm">
               <p>Please select a day and time for the appointment:</p>
               <div class="appointment-form">
-                <!-- Custom-styled Native Date Picker -->
+                <!-- Date Picker -->
                 <div class="custom-time-picker-input-wrapper">
-                  <input type="date" [(ngModel)]="appointmentDay" class="appt-input time-input" title="Select a date" />
+                  <input type="date" [(ngModel)]="appointmentDay" class="appt-input time-input" title="Select a date"
+                    [min]="todayStr" (change)="resetAvailability()" />
                   <mat-icon class="time-icon" style="pointer-events: none;">calendar_today</mat-icon>
                 </div>
-                
-                <!-- Custom Time Picker -->
+
+                <!-- Time Picker -->
                 <div class="custom-time-picker-container">
                   <div class="custom-time-picker-input-wrapper">
-                    <input type="text" [(ngModel)]="appointmentTime" placeholder="Select or type time (e.g. 10:00 AM)" class="appt-input time-input" (focus)="showTimeDropdown = true" />
+                    <input type="text" [(ngModel)]="appointmentTime" placeholder="Select or type time (e.g. 10:00 AM)" class="appt-input time-input"
+                      (focus)="showTimeDropdown = true" (change)="resetAvailability()" />
                     <mat-icon class="time-icon" (click)="showTimeDropdown = !showTimeDropdown">schedule</mat-icon>
                   </div>
                   <div class="time-dropdown-backdrop" *ngIf="showTimeDropdown" (click)="showTimeDropdown = false"></div>
@@ -307,15 +306,27 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
                     <div class="time-option" *ngFor="let t of availableTimes" (click)="selectTime(t)">{{ t }}</div>
                   </div>
                 </div>
-                <button *ngIf="!availabilityChecked" class="btn-check-avail" (click)="checkAvailability()" [disabled]="!appointmentDay || !appointmentTime">Check Availability</button>
+
+                <!-- Check Availability Button -->
+                <button *ngIf="!availabilityChecked" class="btn-check-avail"
+                  (click)="checkAvailability()"
+                  [disabled]="!appointmentDay || !appointmentTime || isCheckingAvailability">
+                  <span *ngIf="!isCheckingAvailability">Check Availability</span>
+                  <span *ngIf="isCheckingAvailability" style="display:flex;align-items:center;gap:6px;">
+                    <span class="mini-spinner"></span> Checking...
+                  </span>
+                </button>
+
+                <!-- Result -->
                 <ng-container *ngIf="availabilityChecked">
-                  <p style="color: #14b8a6; margin-top: 8px;">The clinician is free at that time.</p>
-                  <p style="margin-top: 8px;">Please provide your details:</p>
-                  <input type="text" [(ngModel)]="patientName" placeholder="Full Name" class="appt-input" />
-                  <input type="number" [(ngModel)]="patientAge" placeholder="Age" class="appt-input" />
-                  <div class="actions" style="margin-top: 12px;">
-                    <button class="btn-yes" (click)="submitAppointment()" [disabled]="!patientName || !patientAge">Submit</button>
-                    <button class="btn-no" (click)="showAppointmentForm = false; availabilityChecked = false">Cancel</button>
+                  <p *ngIf="slotAvailable" style="color: #14b8a6; margin-top: 8px;">&#10003; This slot is available!</p>
+                  <p *ngIf="!slotAvailable" style="color: #f87171; margin-top: 8px;">&#10007; This slot is already taken. Please choose another time.</p>
+                  <div class="actions" style="margin-top: 12px;" *ngIf="slotAvailable">
+                    <button class="btn-yes" (click)="submitAppointment()">Confirm Booking</button>
+                    <button class="btn-no" (click)="showAppointmentForm = false; resetAvailability()">Cancel</button>
+                  </div>
+                  <div class="actions" style="margin-top: 12px;" *ngIf="!slotAvailable">
+                    <button class="btn-no" (click)="resetAvailability()">Pick Another Time</button>
                   </div>
                 </ng-container>
               </div>
@@ -326,8 +337,9 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
         <div class="chat-input-area">
           <div class="input-wrapper">
             <input type="text" [(ngModel)]="inputText" (keyup.enter)="sendMessage()"
-                   placeholder="Describe your symptoms or reply..." [disabled]="isStreaming" />
-            <button class="send-btn" (click)="sendMessage()" [disabled]="isStreaming || !inputText.trim()">
+                   [placeholder]="requiresHumanReview ? 'Waiting for clinician review...' : 'Describe your symptoms or reply...'" 
+                   [disabled]="isStreaming || requiresHumanReview" />
+            <button class="send-btn" (click)="sendMessage()" [disabled]="isStreaming || requiresHumanReview || !inputText.trim()">
               <mat-icon>send</mat-icon>
             </button>
           </div>
@@ -899,6 +911,11 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
     }
     .btn-check-avail:hover:not(:disabled) { background: #009688; color: white; transform: translateY(-1px); }
     .btn-check-avail:disabled { opacity: 0.5; cursor: not-allowed; border-color: #e8edf2; color: #9e9e9e; }
+    .mini-spinner {
+      display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,150,136,0.3);
+      border-top-color: #009688; border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .appointment-form { display: flex; flex-direction: column; gap: 8px; }
     .appt-input {
       padding: 10px; border-radius: 8px; border: 1px solid #e8edf2;
@@ -964,6 +981,8 @@ export class TriagePageComponent implements OnInit {
   appointmentTime = '';
   patientName = '';
   patientAge: number | null = null;
+  slotAvailable = false;
+  isCheckingAvailability = false;
   requiresHumanReview = false;
   agentMessageReceived = false;
   agentReplyPreview: string | null = null;
@@ -1003,7 +1022,16 @@ export class TriagePageComponent implements OnInit {
       .join('');
   }
 
-  ngOnInit() { this.fetchSessions(); }
+  get todayStr(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  ngOnInit() {
+    this.fetchSessions();
+    // Pre-populate from Supabase account data so the appointment form never asks for these
+    this.patientName = this.auth.currentName() || '';
+    this.patientAge = this.auth.currentAge() ?? null;
+  }
 
   // BUG FIX 2
   toggleSidebar() {
@@ -1081,6 +1109,28 @@ export class TriagePageComponent implements OnInit {
         }
         this.cdr.markForCheck();
         this.scrollToBottom();
+
+        // Restore live session state (human review flag, appointment status etc.)
+        this.api.getSessionStatus(sessionId).subscribe({
+          next: (status) => {
+            this.requiresHumanReview = status.requires_human_review ?? false;
+            // If the session already ended with an appointment offer still open
+            // but the session is completed, don't re-show the offer widget
+            const completed = (status.flow_status === 'completed');
+            if (!completed && status.flow_status === 'awaiting_human') {
+              this.requiresHumanReview = true;
+            }
+            // If session completed and appointment was booked, mark form as answered
+            if (completed && (status as any).appointment_booked) {
+              this.appointmentOfferAnswered = true;
+              this.offerAppointment = false;
+            }
+            this.cdr.markForCheck();
+            this.scrollToBottom();
+          },
+          // Status endpoint may 404 for old sessions — silently ignore
+          error: () => {}
+        });
       },
       error: () => {
         this.notify.error('Could not load chat history.');
@@ -1089,17 +1139,64 @@ export class TriagePageComponent implements OnInit {
     });
   }
 
+  resetAvailability() {
+    this.availabilityChecked = false;
+    this.slotAvailable = false;
+    this.isCheckingAvailability = false;
+  }
+
   checkAvailability() {
-    this.availabilityChecked = true;
+    if (!this.appointmentDay || !this.appointmentTime) return;
+
+    // Guard: reject past dates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const picked = new Date(this.appointmentDay);
+    if (picked < today) {
+      this.slotAvailable = false;
+      this.availabilityChecked = true;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    // Convert e.g. "2026-06-04" + "10:00 AM" → ISO8601
+    const [timePart, period] = this.appointmentTime.split(' ');
+    let [hours, minutes] = timePart.split(':').map(Number);
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    const isoStr = `${this.appointmentDay}T${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:00`;
+
+    this.isCheckingAvailability = true;
+    this.availabilityChecked = false;
     this.cdr.markForCheck();
+
+    this.api.checkSlotAvailability(isoStr).subscribe({
+      next: (res) => {
+        this.slotAvailable = res.available;
+        this.availabilityChecked = true;
+        this.isCheckingAvailability = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        // Fail open — assume available so booking isn't permanently blocked
+        this.slotAvailable = true;
+        this.availabilityChecked = true;
+        this.isCheckingAvailability = false;
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   submitAppointment() {
     this.appointmentOfferAnswered = true;
     this.offerAppointment = false;
     this.showAppointmentForm = false;
-    this.availabilityChecked = false;
-    const msg = `Yes, please book an appointment for ${this.appointmentDay} at ${this.appointmentTime}. My name is ${this.patientName} and I am ${this.patientAge} years old.`;
+    this.resetAvailability();
+    const name = this.patientName || this.auth.currentName() || '';
+    const age = this.patientAge ?? this.auth.currentAge();
+    const gender = this.auth.currentGender() || '';
+
+    const msg = `Yes, please book an appointment for ${this.appointmentDay} at ${this.appointmentTime}. My name is ${name}, I am ${age} years old${gender ? ', gender: ' + gender : ''}.`;
     this.inputText = msg;
     this.sendMessage();
   }
