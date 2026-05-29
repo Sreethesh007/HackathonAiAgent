@@ -70,6 +70,13 @@ export class TriageApiService {
     return this.http.get<{appointments: any[]}>(`${this.base}/clinician/appointments`);
   }
 
+  checkSlotAvailability(datetimeIso: string): Observable<{ available: boolean }> {
+    return this.http.get<{ available: boolean }>(
+      `${this.base}/clinician/check-slot`,
+      { params: { datetime_iso: datetimeIso } }
+    );
+  }
+
   healthCheck(): Observable<HealthResponse> {
     return this.http.get<HealthResponse>(`${this.base}/health`);
   }
