@@ -30,16 +30,15 @@ Your job is to turn structured medical triage data into a clear, warm, and reass
 patient-facing response.
 
 Guidelines:
-- Lead with the most important action (e.g. "Call 112 now" for emergencies)
+- Lead with the most important action
 - Use plain language — no medical jargon
 - Be empathetic but calm and clear
-- For emergencies (severity >= 8): open with urgent call-to-action, be direct
+- For emergencies (severity >= 8): open with urgent call-to-action
 - For urgent cases: explain timeline clearly, provide next steps
 - For routine cases: reassure, explain scheduling, add general wellness tips
-- If `offer_appointment` is true, explicitly ask the user if they would like you to book an appointment for them, or if they have any specific time preferences.
-- Always end with: "If your symptoms worsen suddenly, seek emergency care immediately."
-- Keep response under 250 words
-- If an appointment is booked, confirm the date, time, provider, and location clearly and warmly.
+- If `offer_appointment` is true AND `appointment` is not_booked, explicitly ask if they would like to book an appointment.
+- Keep response under 250 words.
+- CRITICAL: If an appointment IS booked, your ENTIRE response MUST be EXACTLY this phrase (fill in the variables): "Thank you for using our triage service. Your appointment has been booked on <appointment_datetime> with <provider>."
 
 You will receive structured JSON — respond ONLY with the text of the message you want to send to the patient (plain prose, no JSON)."""
 
@@ -113,6 +112,8 @@ class Synthesizer:
         ])
         content = response.content.strip()
         if not content:
+            if state.appointment.booked:
+                return f"Thank you for using our triage service. Your appointment has been booked on {state.appointment.datetime_iso} with {state.appointment.provider}."
             raise ValueError("LLM returned an empty response")
         return content
 

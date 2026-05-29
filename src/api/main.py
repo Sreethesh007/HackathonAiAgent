@@ -28,7 +28,6 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
 from src.api.auth import get_current_user, TokenData
-from src.api.login import router as auth_router
 from src.api import conversation_store
 from src.api.schemas import (
     ContinueRequest,
@@ -266,9 +265,9 @@ async def event_generator(pipeline_iterator, patient_id: str, session_id: str):
                     "datetime_iso": appt_data.get("datetime_iso"),
                     "provider": appt_data.get("provider"),
                     "location": appt_data.get("location"),
-                    "patient_name": appt_data.get("patient_name", "Unknown"),
-                    "patient_age": appt_data.get("patient_age", "Unknown"),
-                    "reason": triage_state.get("primary_concern", "N/A"),
+                    "patient_name": appt_data.get("patient_name") or "Unknown",
+                    "patient_age": str(appt_data.get("patient_age") or "Unknown"),
+                    "reason": triage_state.get("primary_concern") or "N/A",
                     "session_id": session_id
                 })
 
@@ -284,9 +283,9 @@ async def event_generator(pipeline_iterator, patient_id: str, session_id: str):
                 "urgency_level": final_state.get("triage", {}).get("urgency_level", "unknown"),
                 "appointment_booked": final_state.get("appointment", {}).get("booked", False),
                 "appointment_id": final_state.get("appointment", {}).get("appointment_id") or None,
-                "patient_name": final_state.get("appointment", {}).get("patient_name") or final_state.get("patient_name", "Unknown"),
-                "patient_age": final_state.get("appointment", {}).get("patient_age") or final_state.get("patient_age", "Unknown"),
-                "primary_concern": final_state.get("triage", {}).get("primary_concern", ""),
+                "patient_name": final_state.get("appointment", {}).get("patient_name") or final_state.get("patient_name") or "Unknown",
+                "patient_age": str(final_state.get("appointment", {}).get("patient_age") or final_state.get("patient_age") or "Unknown"),
+                "primary_concern": final_state.get("triage", {}).get("primary_concern") or "N/A",
                 "final_response": final_state.get("final_response", ""),
                 "created_at": final_state.get("created_at", ""),
                 "updated_at": final_state.get("updated_at", ""),
@@ -381,8 +380,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Auth router (login endpoint for Angular frontend) ─────────────────────────
-app.include_router(auth_router)
+# ── (Dev-mode local login removed — authentication handled by Supabase) ────────
 
 
 # ── Request ID + latency middleware ──────────────────────────────────────────
