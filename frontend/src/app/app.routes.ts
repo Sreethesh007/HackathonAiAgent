@@ -10,6 +10,24 @@ export const routes: Routes = [
       import('./features/auth/login-page/login-page.component')
         .then(m => m.LoginPageComponent)
   },
+  {
+    path: 'signup',
+    loadComponent: () =>
+      import('./features/auth/signup-page/signup-page.component')
+        .then(m => m.SignupPageComponent)
+  },
+  {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./features/auth/forgot-password-page/forgot-password-page.component')
+        .then(m => m.ForgotPasswordPageComponent)
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./features/auth/reset-password-page/reset-password-page.component')
+        .then(m => m.ResetPasswordPageComponent)
+  },
 
   // ── Patient (shell wraps children) ───────────────────────────────────────────
   {

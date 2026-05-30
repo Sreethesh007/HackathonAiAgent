@@ -92,6 +92,7 @@ class AppointmentResult(BaseModel):
     booked: bool = False
     patient_name: str = ""
     patient_age: str = ""
+    patient_gender: str = ""
 
 
 class CriticResult(BaseModel):
@@ -119,6 +120,9 @@ class AgentState(BaseModel):
     schema_version: str = "1.0.0"
     session_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     patient_id: str = ""       # ⚠ PII
+    patient_name: str = ""     # ⚠ PII
+    patient_age: str = ""      # ⚠ PII
+    patient_gender: str = ""   # ⚠ PII
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

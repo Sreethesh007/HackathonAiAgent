@@ -1,58 +1,59 @@
-import sqlite3
-import json
-from pathlib import Path
 from src.config import settings
+from supabase import create_client, Client
+from datetime import datetime, timedelta
 
-DB_PATH = Path("./data/appointments.db")
+supabase: Client = create_client(settings.supabase_url, settings.supabase_key)
 
 def init_db():
-    """Initialize the SQLite database for appointments."""
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS appointments (
-                appointment_id TEXT PRIMARY KEY,
-                datetime_iso TEXT,
-                provider TEXT,
-                location TEXT,
-                patient_name TEXT,
-                patient_age TEXT,
-                reason TEXT,
-                session_id TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        conn.commit()
+    """No-op: Supabase tables should be created via SQL editor."""
+    pass
+
+def check_slot_availability(datetime_iso: str) -> bool:
+    """
+    Returns True if the requested slot is FREE (no existing appointment within ±30 min).
+    Returns False if it is TAKEN.
+    """
+    try:
+        requested = datetime.fromisoformat(datetime_iso.replace("Z", "+00:00"))
+        window_start = (requested - timedelta(minutes=30)).isoformat()
+        window_end   = (requested + timedelta(minutes=30)).isoformat()
+
+        response = (
+            supabase.table("appointments")
+            .select("appointment_id, datetime_iso")
+            .gte("datetime_iso", window_start)
+            .lte("datetime_iso", window_end)
+            .execute()
+        )
+        return len(response.data) == 0   # True = free, False = taken
+    except Exception as e:
+        print(f"Failed to check slot availability: {e}")
+        # Fail open — if we can't check, assume free so booking isn't blocked
+        return True
 
 def add_appointment(data: dict):
     """Insert a new appointment."""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT OR IGNORE INTO appointments (
-                appointment_id, datetime_iso, provider, location, 
-                patient_name, patient_age, reason, session_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            data.get("appointment_id"),
-            data.get("datetime_iso"),
-            data.get("provider"),
-            data.get("location"),
-            data.get("patient_name", "Unknown"),
-            data.get("patient_age", "Unknown"),
-            data.get("reason", "N/A"),
-            data.get("session_id")
-        ))
-        conn.commit()
+    try:
+        supabase.table("appointments").upsert({
+            "appointment_id":  data.get("appointment_id"),
+            "datetime_iso":    data.get("datetime_iso"),
+            "provider":        data.get("provider"),
+            "location":        data.get("location"),
+            "patient_name":    data.get("patient_name", "Unknown"),
+            "patient_age":     data.get("patient_age", "Unknown"),
+            "gender":          data.get("gender", ""),
+            "primary_concern": data.get("primary_concern", "N/A"),
+            "reason":          data.get("reason", "N/A"),
+            "session_id":      data.get("session_id"),
+        }).execute()
+    except Exception as e:
+        print(f"Failed to add appointment to Supabase: {e}")
 
 def get_all_appointments() -> list[dict]:
     """Fetch all appointments."""
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM appointments ORDER BY created_at DESC")
-        rows = cursor.fetchall()
-        
-        # Convert sqlite3.Row objects to standard dicts
-        return [dict(row) for row in rows]
+    try:
+        response = supabase.table("appointments").select("*").order("created_at", desc=True).execute()
+        return response.data
+    except Exception as e:
+        print(f"Failed to get appointments from Supabase: {e}")
+        return []
