@@ -211,10 +211,10 @@ def _build_llamacpp(
     )
 
     return ChatOpenAI(
-    model=settings.llamacpp_model,
-    base_url=base_url,
-    api_key="not-needed",
-    max_tokens=max_tokens,
-    temperature=temperature,
-    streaming=streaming,
-)
+        model=settings.llamacpp_model,
+        base_url=base_url,
+        api_key=settings.nvidia_api_key or "not-needed",
+        max_tokens=max_tokens,
+        temperature=temperature,
+        streaming=streaming,
+    )

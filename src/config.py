@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     #   ./llama-server -m models/llama-3.1-8b-instruct.gguf --port 8080
     llamacpp_base_url: str = "http://localhost:8080"
     llamacpp_model: str = "llama-3.1-8b-instruct"   # display name only
+    nvidia_api_key: str = ""
     llamacpp_n_ctx: int = 4096          # context window (match your .gguf)
     llamacpp_n_threads: int = 4         # CPU threads for inference
     llamacpp_n_gpu_layers: int = 0      # 0 = CPU only; >0 = offload to GPU
