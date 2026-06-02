@@ -7,13 +7,13 @@ import {
   SessionStatusResponse, HealthResponse,
   ConversationMessage, SaveMessageRequest
 } from '../models/triage.models';
-
+import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class TriageApiService {
   private base = '/api';
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private auth: AuthService) { }
 
   startTriage(req: TriageRequest): Observable<TriageResponse> {
     return this.http.post<TriageResponse>(`${this.base}/triage`, req);
@@ -94,7 +94,9 @@ export class TriageApiService {
   private createFetchStream(url: string, body: any): Observable<any> {
     return new Observable(observer => {
       const controller = new AbortController();
-      const token = localStorage.getItem('hta_token');
+      // Use AuthService.getToken() — reads the live session signal.
+      // Do NOT use localStorage directly; the token is no longer stored there.
+      const token = this.auth.getToken();
 
       fetch(url, {
         method: 'POST',

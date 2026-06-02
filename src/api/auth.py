@@ -1,7 +1,7 @@
 """JWT Bearer token authentication."""
 
 from __future__ import annotations
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -24,7 +24,7 @@ class TokenData(BaseModel):
 
 def create_access_token(subject: str, role: str = "clinician") -> str:
     """Create a signed JWT — call from /token endpoint or CLI."""
-    expire = datetime.utcnow() + timedelta(minutes=settings.jwt_expire_minutes)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
     payload = {"sub": subject, "role": role, "exp": expire}
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
