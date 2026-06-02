@@ -49,20 +49,21 @@ graph TD
 
 ### Prerequisites
 - Python 3.11+
+- Node.js 18+ and npm (for frontend)
 - Docker & Docker Compose (for full stack)
 - Anthropic API key ([get one here](https://console.anthropic.com))
 
-### Option A — Local Python (development)
+### Option A — Local Development (Backend & Frontend)
 
 ```bash
 # 1. Clone and enter the project
 git clone https://github.com/your-org/healthcare-triage-agent
 cd healthcare-triage-agent
 
-# 2. Install dependencies
+# 2. Install backend dependencies
 make install
 
-# 3. Configure environment
+# 3. Configure backend environment
 cp .env.example .env
 nano .env   # Set ANTHROPIC_API_KEY and JWT_SECRET
 
@@ -76,10 +77,17 @@ python scripts/seed_knowledge.py
 make token USER=dev-user
 # → eyJhbGciOiJIUzI1NiJ9...
 
-# 7. Start the API
+# 7. Start the API (Backend)
 make run-dev
 # API → http://localhost:8000
 # Docs → http://localhost:8000/docs
+
+# 8. Start the Frontend (In a new terminal)
+cd frontend
+npm install
+cp .env.example .env
+npm start
+# Frontend → http://localhost:4200
 ```
 
 ### Option B — Docker Compose (recommended for on-premise)
@@ -107,6 +115,31 @@ docker compose exec app python -c "
 from src.api.auth import create_access_token
 print(create_access_token('admin', role='clinician'))
 "
+```
+
+### Option C — Local Models with llama.cpp (Zero API Cost)
+
+You can run the entire system 100% locally without external APIs. This requires about 6-8GB of RAM.
+
+```bash
+# 1. Install python dependencies for llama.cpp and download a model
+make install-llamacpp
+make download-model MODEL=llama3.1-8b-q4
+
+# 2. Start the llama.cpp server in a separate terminal
+# (Requires llama.cpp to be downloaded and built: https://github.com/ggerganov/llama.cpp)
+./path/to/llama.cpp/build/bin/llama-server \
+  -m models/llama-3.1-8b-instruct.Q4_K_M.gguf \
+  --port 8080 --ctx-size 4096
+
+# 3. Configure the environment to use the local model
+make use-llamacpp
+# (This sets LLM_PROVIDER=llamacpp in your .env file)
+
+# 4. Verify the server is reachable
+make check-llamacpp
+
+# 5. Start the backend and frontend as described in Option A
 ```
 
 ---
