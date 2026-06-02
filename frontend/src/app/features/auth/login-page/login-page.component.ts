@@ -411,8 +411,7 @@ export class LoginPageComponent implements OnInit {
     const { email, password, rememberMe } = this.form.value;
 
     try {
-      await this.auth.signIn(email, password);
-      // Supabase handles session persistence based on its storage configuration
+      await this.auth.signIn(email, password, rememberMe);
       this.redirect();
     } catch (err: any) {
       this.loading = false;
