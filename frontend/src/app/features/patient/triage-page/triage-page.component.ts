@@ -235,8 +235,8 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
               <div class="message-content">
                 <p>{{ msg.content }}</p>
               </div>
-              <div class="avatar" *ngIf="msg.role === 'user'">
-                <mat-icon>person</mat-icon>
+              <div class="avatar" *ngIf="msg.role === 'user'" class="avatar user-initials-avatar">
+                {{ patientInitials }}
               </div>
             </div>
           </ng-container>
@@ -794,7 +794,7 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
       flex-shrink: 0; background: #ffffff; border: 1px solid #e8edf2;
       box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     }
-    .user .avatar { background: #009688; border-color: #009688; }
+    .user .avatar { background: #009688; border-color: #009688; color: #ffffff; font-size: 13px; font-weight: 700; letter-spacing: 0.03em; }
     .user .avatar mat-icon { color: #ffffff; }
     .agent .avatar mat-icon { color: #009688; }
     .avatar mat-icon { font-size: 20px; width: 20px; height: 20px; }
@@ -1095,14 +1095,15 @@ export class TriagePageComponent implements OnInit {
   }
 
   get patientInitials(): string {
-    const name = this.auth.currentUsername() ?? '';
-    const parts = name.replace(/[-_.]/g, ' ').split(' ').filter(Boolean);
+    // Prefer the user's display name; fall back to email address.
+    const name = this.auth.currentName() ?? this.auth.currentUsername() ?? '';
+    const parts = name.replace(/[-_.@]/g, ' ').split(' ').filter(Boolean);
     if (parts.length === 0) {
       return 'P';
     }
     return parts
       .slice(0, 2)
-      .map((part) => part[0].toUpperCase())
+      .map((part: string) => part[0].toUpperCase())
       .join('');
   }
 

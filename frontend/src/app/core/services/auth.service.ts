@@ -150,7 +150,7 @@ export class AuthService {
       const mockUser = {
         id           : 'clinician-mock-id',
         email        : 'clinician@gmail.com',
-        user_metadata: { role: 'clinician', name: 'Dr. Smith' }
+        user_metadata: { role: 'clinician', name: 'A Smith' }
       } as any;
       const mockSession = { access_token: 'mock-clinician-token', user: mockUser } as any;
 

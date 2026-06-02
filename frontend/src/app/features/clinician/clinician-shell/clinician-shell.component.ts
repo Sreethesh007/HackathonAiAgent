@@ -150,7 +150,7 @@ import { TriageApiService } from '../../../core/services/triage-api.service';
             <div class="user-info">
 
               <span class="user-name">
-                Dr. {{ auth.currentUsername() }}
+                Dr. {{ auth.currentName() }}
               </span>
 
               <span class="user-role">
@@ -870,15 +870,17 @@ export class ClinicianShellComponent implements OnInit, OnDestroy {
   ) {}
 
   get initials(): string {
-    const name = this.auth.currentUsername() ?? '';
+    // Prefer the user's display name (from metadata); fall back to email.
+    const name = this.auth.currentName() ?? this.auth.currentUsername() ?? '';
 
     return (
       name
+        .replace(/[-_.@]/g, ' ')
         .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2) || 'DR'
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((n: string) => n[0].toUpperCase())
+        .join('') || 'DR'
     );
   }
 
