@@ -705,14 +705,39 @@ async def session_status(
     session_id: str,
     current_user: TokenData = Depends(get_current_user),
 ):
-    """Inspect the current state of a triage session (useful for polling)."""
+    """Inspect the current state of a triage session (useful for polling).
+
+    Returns a 200 with flow_status='completed' for sessions not found in the
+    in-memory pipeline checkpoint (e.g. old sessions after a server restart).
+    This is the expected, normal case — 404 would be misleading here.
+    """
     if _pipeline is None:
         raise HTTPException(status_code=503, detail="Pipeline not ready")
 
     config = {"configurable": {"thread_id": session_id}}
     checkpoint = _pipeline._graph.get_state(config)
+
+    # Session not in memory (server restart or old session) — return a safe default
+    # so the frontend doesn't treat this as a hard error.
     if checkpoint is None or not checkpoint.values:
-        raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+        now = datetime.utcnow().isoformat()
+        return SessionStatusResponse(
+            session_id=session_id,
+            flow_status="completed",
+            iteration_count=0,
+            max_iterations=10,
+            requires_human_review=False,
+            severity_score=0,
+            urgency_level="unknown",
+            patient_name="",
+            patient_age="",
+            primary_concern="",
+            final_response="",
+            appointment_booked=False,
+            appointment_id=None,
+            created_at=now,
+            updated_at=now,
+        )
 
     from src.agent_state import AgentState
     state = AgentState.model_validate(checkpoint.values)

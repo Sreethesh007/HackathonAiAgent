@@ -20,7 +20,12 @@ export class AuthService {
   readonly currentGender = computed(() => this._user()?.user_metadata?.['gender'] ?? '');
 
   constructor(private router: Router) {
-    this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey);
+    this.supabase = createClient(environment.supabaseUrl, environment.supabaseKey, {
+      auth: {
+        // Bypass the LockManager for Edge tracking prevention compatibility
+        lock: (name: string, acquire: () => Promise<any>) => acquire()
+      }
+    } as any);
 
     this.supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {

@@ -269,7 +269,7 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
             </div>
           </div>
 
-          <div class="reply-preview" *ngIf="agentReplyPreview && !isStreaming">
+          <div class="reply-preview" *ngIf="agentReplyPreview && isStreaming">
             <div class="reply-preview-content">
               <pre>{{ agentReplyPreview }}</pre>
             </div>
@@ -1244,18 +1244,24 @@ export class TriagePageComponent implements OnInit {
         this.isStreaming = false;
         this.fetchSessions();
 
-        // Persist the assistant reply to SQLite once streaming is complete
-        const assistantContent = this.agentReplyPreview;
-        const sessionId = this.activeSessionId;
-        if (assistantContent && sessionId) {
-          this.api.saveConversationMessage({
-            session_id: sessionId,
-            role: 'assistant',
-            message: assistantContent
-          }).subscribe();
+        // Move the accumulated reply into the chat messages list as a proper agent bubble
+        if (this.agentReplyPreview) {
+          this.messages.push({ role: 'agent', content: this.agentReplyPreview });
+          // Persist the assistant reply to SQLite once streaming is complete
+          const assistantContent = this.agentReplyPreview;
+          const sessionId = this.activeSessionId;
+          this.agentReplyPreview = null;
+          if (assistantContent && sessionId) {
+            this.api.saveConversationMessage({
+              session_id: sessionId,
+              role: 'assistant',
+              message: assistantContent
+            }).subscribe();
+          }
         }
 
         this.cdr.markForCheck();
+        this.scrollToBottom();
       }
     };
 
@@ -1447,7 +1453,9 @@ export class TriagePageComponent implements OnInit {
     }
 
     if (event.type === 'message') {
-      const content = this.extractHumanReadable(event.content);
+      // Use raw content — do NOT run extractHumanReadable on streaming tokens
+      // as it can silently drop words that look like incomplete JSON fragments.
+      const content = typeof event.content === 'string' ? event.content : JSON.stringify(event.content);
       this.agentMessageReceived = true;
       this.agentReplyPreview = (this.agentReplyPreview ? this.agentReplyPreview + content : content);
       this.cdr.markForCheck();
@@ -1475,6 +1483,13 @@ export class TriagePageComponent implements OnInit {
           );
         }
         this.agentMessageReceived = true;
+      }
+      // Push the reply to messages here so it shows even if the complete() callback
+      // fires after metadata (which is common in SSE). Dedup by checking if already pushed.
+      if (this.agentReplyPreview && !this.messages.some(m => m.role === 'agent' && m.content === this.agentReplyPreview)) {
+        this.messages.push({ role: 'agent', content: this.agentReplyPreview! });
+        this.agentReplyPreview = null;
+        this.scrollToBottom();
       }
       this.thinkingSteps.forEach(s => s.done = true);
       this.thinkingExpanded = false;
