@@ -667,6 +667,37 @@ async def get_conversation_history(
     return {"session_id": session_id, "messages": messages}
 
 
+@app.delete("/api/conversations/{session_id}", tags=["Conversations"], status_code=200)
+async def delete_conversation(
+    session_id: str,
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Delete all messages for a session from the conversation store.
+
+    Also removes the session from the in-memory patient session cache so
+    the sidebar updates immediately without a server restart.
+    """
+    deleted_count = conversation_store.delete_session(session_id)
+
+    # Remove from in-memory session cache for the current patient
+    patient_id = current_user.sub
+    _patient_sessions[patient_id] = [
+        s for s in _patient_sessions[patient_id]
+        if s["session_id"] != session_id
+    ]
+
+    # Remove from pending review queue if present
+    _pending_review_sessions.pop(session_id, None)
+
+    log.info(
+        "conversation_deleted",
+        session_id=session_id,
+        patient_id=patient_id,
+        deleted_rows=deleted_count,
+    )
+    return {"session_id": session_id, "deleted": deleted_count, "status": "deleted"}
+
+
 @app.get("/clinician/pending", tags=["Clinician"])
 async def get_pending_reviews(current_user: TokenData = Depends(get_current_user)):
     """Return all sessions currently awaiting clinician (HITL) review.

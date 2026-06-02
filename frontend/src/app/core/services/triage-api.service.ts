@@ -62,6 +62,16 @@ export class TriageApiService {
     );
   }
 
+  /**
+   * Delete all messages for a session from the conversation store.
+   * The backend also purges the in-memory session cache entry.
+   */
+  deleteConversation(sessionId: string): Observable<{ session_id: string; deleted: number; status: string }> {
+    return this.http.delete<{ session_id: string; deleted: number; status: string }>(
+      `${this.base}/api/conversations/${sessionId}`
+    );
+  }
+
   getPendingReviews(): Observable<{ sessions: SessionStatusResponse[] }> {
     return this.http.get<{ sessions: SessionStatusResponse[] }>(`${this.base}/clinician/pending`);
   }

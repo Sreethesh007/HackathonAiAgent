@@ -135,6 +135,14 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
 
         </div>
 
+        <button
+          class="session-delete-btn"
+          (click)="deleteSession($event, s.session_id)"
+          title="Delete conversation"
+          matTooltip="Delete conversation">
+          <mat-icon>delete_outline</mat-icon>
+        </button>
+
       </div>
 
       <div *ngIf="sessions.length === 0" class="no-sessions">
@@ -542,6 +550,7 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
   margin-bottom: 2px;
   transition: background 0.15s;
   border: 1px solid transparent;
+  position: relative;
 }
 
 .session-item:hover {
@@ -551,6 +560,39 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
 .session-item.active {
   background: rgba(255,255,255,0.18);
   border-color: transparent;
+}
+
+.session-delete-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  margin-left: auto;
+  padding: 0;
+}
+
+.session-item:hover .session-delete-btn {
+  opacity: 1;
+}
+
+.session-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+}
+
+.session-delete-btn mat-icon {
+  font-size: 17px;
+  width: 17px;
+  height: 17px;
 }
 
 .session-icon {
@@ -1045,6 +1087,29 @@ export class TriagePageComponent implements OnInit {
         this.sessions = res.sessions || [];
         this.sessions.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         this.cdr.markForCheck();
+      }
+    });
+  }
+
+  deleteSession(event: Event, sessionId: string) {
+    // Prevent the click from bubbling up and triggering loadSession()
+    event.stopPropagation();
+
+    this.api.deleteConversation(sessionId).subscribe({
+      next: () => {
+        // Remove from local sidebar list immediately
+        this.sessions = this.sessions.filter((s: any) => s.session_id !== sessionId);
+
+        // If the deleted session was the active one, reset to a blank state
+        if (this.activeSessionId === sessionId) {
+          this.newSession();
+        }
+
+        this.notify.success('Conversation deleted.');
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.notify.error('Could not delete conversation. Please try again.');
       }
     });
   }
