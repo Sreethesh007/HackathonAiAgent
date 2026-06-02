@@ -36,6 +36,9 @@ import { RouterModule } from '@angular/router';
   template: `
     <div class="login-wrapper">
       <div class="login-bg"></div>
+      <a routerLink="/" class="auth-home-btn" aria-label="Back to home" title="Back to home">
+        <mat-icon>local_hospital</mat-icon>
+      </a>
       <mat-card class="login-card" [@cardIn]>
         <div class="login-logo">
           <mat-icon class="logo-icon">local_hospital</mat-icon>
@@ -90,6 +93,36 @@ styles: [`
     position: relative;
     overflow: hidden;
     background: #eef2f5;
+  }
+
+  /* ── Home button (top-left icon only) ─────────── */
+  .auth-home-btn {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    text-decoration: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  }
+  .auth-home-btn:hover {
+    border-color: #009688;
+    box-shadow: 0 2px 10px rgba(0, 150, 136, 0.15);
+    transform: translateY(-1px);
+  }
+  .auth-home-btn mat-icon {
+    font-size: 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+    color: #009688 !important;
   }
 
   .login-bg {
