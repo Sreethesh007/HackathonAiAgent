@@ -50,6 +50,7 @@ graph TD
 ### Prerequisites
 - Python 3.11+
 - Node.js 18+ and npm (for frontend)
+- Build tools: `make` (for setup automation) and `cmake` / `C++ compiler` (if building llama.cpp locally)
 - Docker & Docker Compose (for full stack)
 - Anthropic API key ([get one here](https://console.anthropic.com))
 
