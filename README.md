@@ -62,6 +62,10 @@ cd healthcare-triage-agent
 
 # 2. Install backend dependencies
 make install
+# Or manually:
+# python -m venv .venv
+# source .venv/bin/activate  # (On Windows: .venv\Scripts\activate)
+# pip install -e ".[dev]"
 
 # 3. Configure backend environment
 cp .env.example .env
@@ -69,16 +73,19 @@ nano .env   # Set ANTHROPIC_API_KEY and JWT_SECRET
 
 # 4. Verify setup
 make env-check
+# Or manually: python scripts/check_env.py
 
 # 5. Seed the medical knowledge base
 python scripts/seed_knowledge.py
 
 # 6. Generate a dev JWT token
 make token USER=dev-user
+# Or manually: python -c "from src.api.auth import create_access_token; print(create_access_token('dev-user'))"
 # → eyJhbGciOiJIUzI1NiJ9...
 
 # 7. Start the API (Backend)
 make run-dev
+# Or manually: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
 # API → http://localhost:8000
 # Docs → http://localhost:8000/docs
 
