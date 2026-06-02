@@ -3,7 +3,15 @@ import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
-  // ── Public ──────────────────────────────────────────────────────────────────
+  // ── Landing (public, unauthenticated entry point) ─────────────────────────
+  {
+    path: '',
+    loadComponent: () =>
+      import('./features/landing/landing-page/landing-page.component')
+        .then(m => m.LandingPageComponent)
+  },
+
+  // ── Public auth ──────────────────────────────────────────────────────────────
   {
     path: 'login',
     loadComponent: () =>
@@ -79,7 +87,6 @@ export const routes: Routes = [
     ]
   },
 
-  // ── Defaults ─────────────────────────────────────────────────────────────────
-  { path: '', redirectTo: '/login', pathMatch: 'full' },
-  { path: '**', redirectTo: '/login' }
+  // ── Wildcard ─────────────────────────────────────────────────────────────────
+  { path: '**', redirectTo: '' }
 ];

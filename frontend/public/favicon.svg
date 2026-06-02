@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#26A69A"/>
+      <stop offset="100%" stop-color="#00695C"/>
+    </linearGradient>
+    <linearGradient id="plus" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#e0f2f1" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background (matches brand-icon-wrap border-radius) -->
+  <rect width="32" height="32" rx="8" ry="8" fill="url(#bg)"/>
+
+  <!-- Subtle inner highlight -->
+  <rect width="32" height="32" rx="8" ry="8"
+        fill="white" fill-opacity="0.08"/>
+
+  <!-- Medical plus / cross — centred, proportioned like a health cross -->
+  <!-- Horizontal bar -->
+  <rect x="7" y="13" width="18" height="6" rx="2" ry="2" fill="url(#plus)"/>
+  <!-- Vertical bar -->
+  <rect x="13" y="7" width="6" height="18" rx="2" ry="2" fill="url(#plus)"/>
+</svg>
