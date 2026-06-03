@@ -342,7 +342,7 @@ graph LR
 | 🔀 **Proxy** | Nginx (SPA + API reverse proxy) |
 | 📊 **Monitoring** | Prometheus + Grafana |
 | 🔄 **CI/CD** | GitHub Actions (2 workflows) |
-| ☁️ **Deploy** | Vercel (FE) · Azure Web App (BE) · Docker Compose |
+| ☁️ **Deploy** | Azure Web App (BE) · Docker Compose |
 
 ---
 
@@ -388,8 +388,7 @@ healthcare-triage-agent/
 │   │   ├── features/             # auth/ patient/ clinician/ landing/
 │   │   └── shared/               # Components, pipes, directives, animations
 │   ├── Dockerfile                # Multi-stage: Node 20 → Nginx 1.27
-│   ├── nginx.conf                # SPA routing + /api proxy
-│   └── vercel.json               # Vercel SPA rewrites
+│   └── nginx.conf                # SPA routing + /api proxy
 │
 ├── 📂 monitoring/
 │   └── prometheus.yml            # 15s scrape config
@@ -430,7 +429,10 @@ healthcare-triage-agent/
 | 📦 Node.js | `20+` | LTS recommended |
 | 📦 npm | `11+` | Included with Node |
 | 🐙 Git | `2.40+` | |
+| 🛠️ Make | `4.0+` | Required for automation targets |
 | 🐳 Docker | `24+` | Optional — for containerised stack |
+
+> 💡 **Windows Users**: You will need `make` installed. The easiest way is via [Chocolatey](https://chocolatey.org/): `choco install make`. Alternatively, use WSL (Windows Subsystem for Linux) or Git Bash. Mac/Linux users typically have `make` pre-installed (`brew install make` or `apt install make` if missing).
 
 ---
 
@@ -845,14 +847,14 @@ flowchart LR
 graph TB
     subgraph PROD["🌍 Production"]
         direction LR
-        subgraph CDN["📡 CDN / Edge"]
-            VERCEL["▲ Vercel\nAngular SPA\nGlobal CDN"]
+        subgraph STATIC["📡 Static Hosting"]
+            FE_HOST["🌐 Frontend\nAngular SPA"]
         end
         subgraph AZURE["☁️ Azure"]
             WEBAPP["🔷 Azure Web App\nFastAPI Container\nACR image"]
             ACI["📦 Azure Container\nInstances\nChromaDB"]
         end
-        CDN -- "HTTPS /api/*" --> AZURE
+        STATIC -- "HTTPS /api/*" --> AZURE
     end
 
     subgraph LOCAL["🖥️ Local / Dev"]
@@ -876,10 +878,6 @@ cd frontend && npx ng build --configuration production
 
 # Full stack (local)
 docker compose up --build -d
-
-# Frontend → Vercel
-# Set SUPABASE_URL + SUPABASE_KEY in Vercel environment variables
-# vercel.json handles SPA rewrites automatically
 
 # Backend → Azure Web App
 # 1. Push image to ACR
