@@ -1077,7 +1077,6 @@ make clean             # Remove caches + generated files
 
 <div align="center">
 
-**Built with ❤️ for the Healthcare AI Hackathon**
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-6366f1?logo=chainlink&logoColor=white)](https://langchain-ai.github.io/langgraph/)
@@ -1085,6 +1084,5 @@ make clean             # Remove caches + generated files
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-orange?logo=databricks&logoColor=white)](https://www.trychroma.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
 
-*MIT License — See [LICENSE](LICENSE) for details*
 
 </div>
