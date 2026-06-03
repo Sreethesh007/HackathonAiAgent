@@ -25,6 +25,9 @@ import { NotificationService } from '../../../core/services/notification.service
   template: `
     <div class="auth-wrapper">
       <div class="auth-bg"></div>
+      <a routerLink="/" class="auth-home-btn" aria-label="Back to home" title="Back to home">
+        <mat-icon>local_hospital</mat-icon>
+      </a>
       <mat-card class="auth-card">
         <div class="auth-header">
           <mat-icon class="auth-icon">person_add</mat-icon>
