@@ -50,7 +50,7 @@ import { TriageApiService } from '../../../core/services/triage-api.service';
             <div class="brand-text">
 
               <span class="brand-title">
-                Healthcare
+                MediTriage
               </span>
 
               <span class="brand-sub">
