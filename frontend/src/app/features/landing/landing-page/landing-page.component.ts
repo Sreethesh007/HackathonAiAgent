@@ -160,9 +160,9 @@ const TESTIMONIALS: Testimonial[] = [
           </a>
 
           <nav class="nav-links" aria-label="Primary navigation">
-            <a class="nav-link" href="#features" id="navFeatures">Features</a>
-            <a class="nav-link" href="#testimonials" id="navTestimonials">Use Cases</a>
-            <a class="nav-link" href="#footer" id="navContact">Contact</a>
+            <a class="nav-link" id="navFeatures" (click)="scrollTo('features')" role="button" style="cursor:pointer">Features</a>
+            <a class="nav-link" id="navTestimonials" (click)="scrollTo('testimonials')" role="button" style="cursor:pointer">Use Cases</a>
+            <a class="nav-link" id="navContact" (click)="scrollTo('footer')" role="button" style="cursor:pointer">Contact</a>
           </nav>
 
           <div class="nav-cta-group">
@@ -184,9 +184,9 @@ const TESTIMONIALS: Testimonial[] = [
         <!-- Mobile drawer -->
         <div id="mobile-menu" class="mobile-menu" [class.mobile-menu--open]="mobileOpen()"
              role="navigation" aria-label="Mobile navigation">
-          <a class="mobile-link" href="#features" (click)="mobileOpen.set(false)">Features</a>
-          <a class="mobile-link" href="#testimonials" (click)="mobileOpen.set(false)">Use Cases</a>
-          <a class="mobile-link" href="#footer" (click)="mobileOpen.set(false)">Contact</a>
+          <a class="mobile-link" (click)="scrollTo('features'); mobileOpen.set(false)" role="button" style="cursor:pointer">Features</a>
+          <a class="mobile-link" (click)="scrollTo('testimonials'); mobileOpen.set(false)" role="button" style="cursor:pointer">Use Cases</a>
+          <a class="mobile-link" (click)="scrollTo('footer'); mobileOpen.set(false)" role="button" style="cursor:pointer">Contact</a>
           <a routerLink="/login" class="mobile-link" (click)="mobileOpen.set(false)">Sign In</a>
           <a routerLink="/signup" class="mobile-cta" (click)="mobileOpen.set(false)">Get Started →</a>
         </div>
@@ -224,8 +224,8 @@ const TESTIMONIALS: Testimonial[] = [
               <mat-icon aria-hidden="true">rocket_launch</mat-icon>
               Start Triage Now
             </a>
-            <a href="#features" class="btn-ghost" id="heroLearnMore"
-               aria-label="Learn more about features">
+            <a (click)="scrollTo('features')" class="btn-ghost" id="heroLearnMore"
+               aria-label="Learn more about features" role="button" style="cursor:pointer">
               Explore Features
               <mat-icon aria-hidden="true">arrow_downward</mat-icon>
             </a>
@@ -430,8 +430,8 @@ const TESTIMONIALS: Testimonial[] = [
             <div class="footer-nav-col">
               <h3 class="footer-nav-heading">Platform</h3>
               <ul class="footer-nav-list" role="list">
-                <li><a href="#features" class="footer-link">Features</a></li>
-                <li><a href="#testimonials" class="footer-link">Use Cases</a></li>
+                <li><a (click)="scrollTo('features')" class="footer-link" role="button" style="cursor:pointer">Features</a></li>
+                <li><a (click)="scrollTo('testimonials')" class="footer-link" role="button" style="cursor:pointer">Use Cases</a></li>
                 <li><a routerLink="/signup" class="footer-link">Get Started</a></li>
                 <li><a routerLink="/login" class="footer-link">Sign In</a></li>
               </ul>
@@ -496,6 +496,7 @@ const TESTIMONIALS: Testimonial[] = [
       min-height: 100vh;
       background: #f4f7fb;
       color: #1f2937;
+      scroll-behavior: smooth;
     }
 
     /* ── Shared Section Layout ─────────────────────────────────── */
@@ -1417,6 +1418,13 @@ export class LandingPageComponent implements OnInit {
   mobileOpen = signal(false);
 
   ngOnInit(): void {}
+
+  scrollTo(sectionId: string): void {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
 
   @HostListener('window:scroll')
   onScroll(): void {
