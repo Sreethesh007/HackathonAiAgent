@@ -164,8 +164,8 @@ def check_availability(date_range: str, urgency: str = "routine") -> list[dict[s
         slots.append({
             "slot_id": str(uuid.uuid4())[:8],
             "datetime_iso": slot_dt.isoformat(),
-            "provider": f"Dr. {'ABC'[i]}. Smith",
-            "location": "City Medical Center — Room 10" + str(i + 1),
+            "provider": "Dr. A. Smith",
+            "location": "City Medical Center — Room 101",
             "slot_type": "telemedicine" if urgency == "routine" else "in_person",
         })
     return slots
