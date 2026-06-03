@@ -294,16 +294,11 @@ healthcare-triage-agent/
 ## Setup Instructions
 
 ### Prerequisites
+- Python 3.11+
+- Docker & Docker Compose (for full stack)
+- Anthropic API key ([get one here](https://console.anthropic.com))
 
-| Requirement | Version |
-|-------------|---------|
-| Python | 3.11+ |
-| Node.js | 20+ |
-| npm | 11+ |
-| Git | 2.40+ |
-| Docker & Docker Compose | (optional, for containerised deployment) |
-
-### Backend (Local Development)
+### Option A — Local Python (development)
 
 ```bash
 # 1. Clone the repository
@@ -319,33 +314,30 @@ venv\Scripts\activate
 # macOS/Linux
 source venv/bin/activate
 
-# 3. Install dependencies (including dev tools)
-pip install -e ".[dev]"
+# 2. Install dependencies
+make install
 
-# 4. Copy and configure environment variables
+# 3. Configure environment
 cp .env.example .env
 # Edit .env — at minimum set: ANTHROPIC_API_KEY, JWT_SECRET, SUPABASE_URL, SUPABASE_KEY
 
-# 5. Verify environment is correctly configured
-python scripts/check_env.py
+# 4. Verify setup
+make env-check
 
 # 6. Seed the knowledge base (required on first run)
 python scripts/seed_knowledge.py
 
-# 7. Start the API server with hot-reload
-uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload --log-level info
+# 6. Generate a dev JWT token
+make token USER=dev-user
+# → eyJhbGciOiJIUzI1NiJ9...
 
-# Or use the Makefile shortcut:
+# 7. Start the API
 make run-dev
+# API → http://localhost:8000
+# Docs → http://localhost:8000/docs
 ```
 
-The API will be available at:
-- **API**: [http://localhost:8000](http://localhost:8000)
-- **Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-- **Metrics**: [http://localhost:8000/metrics](http://localhost:8000/metrics)
-
-### Frontend (Local Development)
+### Option B — Docker Compose (recommended for on-premise)
 
 ```bash
 # 1. Navigate to the frontend directory
@@ -376,168 +368,31 @@ docker compose up --build -d
 
 # Or via Makefile:
 make run-docker
+
+# Services:
+#   API          → http://localhost:8000
+#   API Docs     → http://localhost:8000/docs
+#   ChromaDB     → http://localhost:8001
+#   Prometheus   → http://localhost:9090
+#   Grafana      → http://localhost:3000  (admin / admin)
+
+# 3. Seed knowledge base inside the container
+docker compose exec app python scripts/seed_knowledge.py
+
+# 4. Generate a JWT token
+docker compose exec app python -c "
+from src.api.auth import create_access_token
+print(create_access_token('admin', role='clinician'))
+"
 ```
-
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| API | [http://localhost:8000](http://localhost:8000) | Bearer JWT |
-| API Docs | [http://localhost:8000/docs](http://localhost:8000/docs) | — |
-| ChromaDB | [http://localhost:8001](http://localhost:8001) | — |
-| Prometheus | [http://localhost:9090](http://localhost:9090) | — |
-| Grafana | [http://localhost:3000](http://localhost:3000) | admin / admin |
-
-```bash
-# View logs
-docker compose logs -f app
-
-# Stop all services
-docker compose down
-# Or: make stop-docker
-```
-
-### Local Models with llama.cpp
-
-Run the entire system without any API keys using a local GGUF model:
-
-```bash
-# 1. Clone and build llama.cpp
-git clone https://github.com/ggerganov/llama.cpp
-cd llama.cpp && cmake -B build && cmake --build build -j $(nproc)
-
-# 2. Download a model (choose based on available RAM)
-#    Via the included script:
-python scripts/download_model.py --model llama3.1-8b-q4
-
-#    Or manually from HuggingFace:
-#    https://huggingface.co/bartowski
-
-# 3. Start the llama.cpp server
-./build/bin/llama-server \
-  -m models/llama-3.1-8b-instruct.Q4_K_M.gguf \
-  --host 0.0.0.0 --port 8080 \
-  --n-gpu-layers 0 \
-  --threads 4 \
-  --ctx-size 4096
-
-# 4. Switch the provider in .env
-#    LLM_PROVIDER=llamacpp
-#    Or: make use-llamacpp
-
-# 5. Verify connectivity
-make check-llamacpp
-
-# 6. Start the API
-make run-dev
-```
-
-#### Recommended Models
-
-| Model | RAM | Quality | Speed |
-|-------|-----|---------|-------|
-| `llama-3.1-8b-instruct.Q4_K_M.gguf` | 6 GB | Good ✓ | Fast |
-| `llama-3.1-8b-instruct.Q8_0.gguf` | 8 GB | Better ✓✓ | Medium |
-| `mistral-7b-instruct-v0.3.Q4_K_M.gguf` | 5 GB | Good ✓ | Fast |
-| `phi-3-mini-4k-instruct.Q4_K_M.gguf` | 3 GB | Basic | Very Fast |
 
 ---
 
-## Environment Variables
+## API Reference
 
-All variables are documented in [`.env.example`](.env.example). Copy it to `.env` and fill in your values.
+All endpoints require `Authorization: Bearer <JWT>` header.
 
-### LLM Provider
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `LLM_PROVIDER` | `anthropic` (cloud) or `llamacpp` (local) | `anthropic` |
-| `ANTHROPIC_API_KEY` | Anthropic API key (required when provider=anthropic) | — |
-| `LLM_MODEL` | Anthropic model name | `claude-sonnet-4-20250514` |
-| `LLAMACPP_BASE_URL` | llama.cpp server URL | `http://localhost:8080` |
-| `LLAMACPP_MODEL` | Display name for local model | `llama-3.1-8b-instruct` |
-| `LLAMACPP_N_CTX` | Context window size | `4096` |
-| `LLAMACPP_N_THREADS` | CPU threads for inference | `4` |
-| `LLAMACPP_N_GPU_LAYERS` | GPU offload layers (0 = CPU only) | `0` |
-| `LLM_MAX_TOKENS` | Max output tokens | `2048` |
-| `LLM_TEMPERATURE` | LLM temperature | `0.1` |
-
-### Vector Store & Memory
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CHROMA_PERSIST_DIR` | ChromaDB storage path | `./data/chroma` |
-| `CHROMA_COLLECTION_NAME` | Collection name | `medical_guidelines` |
-| `SESSION_DIR` | Session state path | `./data/sessions` |
-| `SESSION_TTL_SECONDS` | Session time-to-live | `7200` |
-| `MEMORY_WINDOW_SIZE` | Conversation window | `10` |
-
-### Agent Pipeline
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `MAX_AGENT_ITERATIONS` | Max pipeline loop iterations | `10` |
-| `MAX_FLOW_DURATION_SECONDS` | Pipeline timeout | `120` |
-| `AGENT_RETRY_ATTEMPTS` | LLM retry count per agent | `3` |
-| `HUMAN_APPROVAL_THRESHOLD` | Critic quality score below which HITL triggers | `0.70` |
-
-### API & Auth
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `API_HOST` | Bind address | `0.0.0.0` |
-| `API_PORT` | Port | `8000` |
-| `CORS_ORIGINS` | Allowed CORS origins (comma-separated) | `http://localhost:3000,http://localhost:8080` |
-| `RATE_LIMIT_PER_MINUTE` | Requests per minute per IP | `10` |
-| `JWT_SECRET` | JWT signing secret (**change in production**) | `change_me` |
-| `JWT_ALGORITHM` | JWT algorithm | `HS256` |
-| `JWT_EXPIRE_MINUTES` | Token expiration | `60` |
-
-### Supabase
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SUPABASE_URL` | Supabase project URL | — |
-| `SUPABASE_KEY` | Supabase anon (public) key | — |
-
-### Observability
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `LOG_LEVEL` | Logging level | `INFO` |
-| `ENVIRONMENT` | `development` or `production` | `development` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry endpoint (optional) | — |
-| `LANGCHAIN_TRACING_V2` | Enable LangSmith tracing | `false` |
-
-### Frontend
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SUPABASE_URL` | Supabase project URL (in `frontend/.env`) | — |
-| `SUPABASE_KEY` | Supabase anon key (in `frontend/.env`) | — |
-
----
-
-## Usage
-
-### Seeding the Knowledge Base
-
-The system requires a seeded ChromaDB knowledge base to perform evidence-based triage. The built-in seeder includes 18 clinical guidelines covering emergency (cardiac, stroke, anaphylaxis, sepsis), urgent (headache, fever, abdominal pain, mental health), and routine (hypertension, UTI, preventive care) categories.
-
-```bash
-# Seed with built-in guidelines (skip existing)
-python scripts/seed_knowledge.py
-
-# Wipe and reseed from scratch
-python scripts/seed_knowledge.py --reset
-
-# Or via Makefile:
-make seed-knowledge
-```
-
-**Adding custom guidelines**: Place PDF files in `data/knowledge/` and re-run the seeder. The script automatically extracts text, chunks with sentence-aware overlap (800 chars, 150 overlap), and embeds using the same model.
-
-### Generating JWT Tokens
-
-For development and testing (when not using Supabase auth):
+### Start a triage session
 
 ```bash
 # Generate a dev token for user "alice"

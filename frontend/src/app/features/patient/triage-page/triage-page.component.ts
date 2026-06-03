@@ -226,7 +226,8 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
             </div>
           </div>
 
-          <ng-container *ngFor="let msg of messages">
+          <!-- All messages except the last agent reply render ABOVE the thinking panel -->
+          <ng-container *ngFor="let msg of displayMessages">
             <div class="message-wrapper" [ngClass]="msg.role">
               <div class="avatar" *ngIf="msg.role === 'agent' || msg.role === 'system'">
                 <mat-icon>smart_toy</mat-icon>
@@ -234,8 +235,8 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
               <div class="message-content">
                 <p>{{ msg.content }}</p>
               </div>
-              <div class="avatar" *ngIf="msg.role === 'user'">
-                <mat-icon>person</mat-icon>
+              <div class="avatar" *ngIf="msg.role === 'user'" class="avatar user-initials-avatar">
+                {{ patientInitials }}
               </div>
             </div>
           </ng-container>
@@ -277,11 +278,24 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
             </div>
           </div>
 
+          <!-- Streaming preview (while AI is still typing) -->
           <div class="reply-preview" *ngIf="agentReplyPreview && isStreaming">
             <div class="reply-preview-content">
               <pre>{{ agentReplyPreview }}</pre>
             </div>
           </div>
+
+          <!-- Last bot reply renders BELOW the thinking panel -->
+          <ng-container *ngIf="lastAgentMsg">
+            <div class="message-wrapper agent">
+              <div class="avatar">
+                <mat-icon>smart_toy</mat-icon>
+              </div>
+              <div class="message-content">
+                <p>{{ lastAgentMsg.content }}</p>
+              </div>
+            </div>
+          </ng-container>
 
           <!-- Interactive block for appointments -->
           <div class="interactive-block" *ngIf="offerAppointment && !isStreaming">
@@ -780,7 +794,7 @@ const NODE_META: Record<string, { label: string; icon: string }> = {
       flex-shrink: 0; background: #ffffff; border: 1px solid #e8edf2;
       box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     }
-    .user .avatar { background: #009688; border-color: #009688; }
+    .user .avatar { background: #009688; border-color: #009688; color: #ffffff; font-size: 13px; font-weight: 700; letter-spacing: 0.03em; }
     .user .avatar mat-icon { color: #ffffff; }
     .agent .avatar mat-icon { color: #009688; }
     .avatar mat-icon { font-size: 20px; width: 20px; height: 20px; }
@@ -1052,15 +1066,44 @@ export class TriagePageComponent implements OnInit {
     private cdr: ChangeDetectorRef
   ) { }
 
+  /**
+   * All messages except the last agent/system bubble.
+   * These render ABOVE the thinking panel so the flow is:
+   * user msg → thinking panel → bot reply
+   */
+  get displayMessages(): typeof this.messages {
+    // Find the index of the last agent or system message
+    let lastAgentIdx = -1;
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      if (this.messages[i].role === 'agent' || this.messages[i].role === 'system') {
+        lastAgentIdx = i;
+        break;
+      }
+    }
+    if (lastAgentIdx === -1) return this.messages;
+    return this.messages.slice(0, lastAgentIdx);
+  }
+
+  /** The last agent/system message — rendered BELOW the thinking panel. */
+  get lastAgentMsg(): (typeof this.messages)[0] | null {
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      if (this.messages[i].role === 'agent' || this.messages[i].role === 'system') {
+        return this.messages[i];
+      }
+    }
+    return null;
+  }
+
   get patientInitials(): string {
-    const name = this.auth.currentUsername() ?? '';
-    const parts = name.replace(/[-_.]/g, ' ').split(' ').filter(Boolean);
+    // Prefer the user's display name; fall back to email address.
+    const name = this.auth.currentName() ?? this.auth.currentUsername() ?? '';
+    const parts = name.replace(/[-_.@]/g, ' ').split(' ').filter(Boolean);
     if (parts.length === 0) {
       return 'P';
     }
     return parts
       .slice(0, 2)
-      .map((part) => part[0].toUpperCase())
+      .map((part: string) => part[0].toUpperCase())
       .join('');
   }
 
@@ -1167,7 +1210,7 @@ export class TriagePageComponent implements OnInit {
       next: (res) => {
         this.messages = res.messages.map(m => ({
           role: m.role === 'user' ? 'user' : 'agent' as 'user' | 'agent' | 'system',
-          content: m.message
+          content: m.role === 'user' ? m.message : this.stripSurroundingQuotes(m.message)
         }));
         if (this.messages.length > 0) {
           this.notify.success('Chat history loaded.');
@@ -1270,9 +1313,22 @@ export class TriagePageComponent implements OnInit {
     this.appointmentOfferAnswered = true;
     this.offerAppointment = false;
     this.showAppointmentForm = false;
-    this.messages.push({ role: 'agent', content: 'Thank you. If you change your mind, you can always ask later.' });
-    this.inputText = 'No, thank you.';
-    this.sendMessage();
+
+    const userText = 'No, thank you.';
+    const agentText = 'No problem! If you change your mind or your symptoms worsen, feel free to ask at any time.';
+    const sessionId = this.activeSessionId;
+
+    // Show both sides in the chat immediately — no AI pipeline call needed
+    this.messages.push({ role: 'user', content: userText });
+    this.messages.push({ role: 'agent', content: agentText });
+    this.scrollToBottom();
+    this.cdr.markForCheck();
+
+    // Persist both turns to DB so history is complete
+    if (sessionId) {
+      this.api.saveConversationMessage({ session_id: sessionId, role: 'user', message: userText }).subscribe();
+      this.api.saveConversationMessage({ session_id: sessionId, role: 'assistant', message: agentText }).subscribe();
+    }
   }
 
   sendReply(text: string) {
@@ -1309,21 +1365,8 @@ export class TriagePageComponent implements OnInit {
         this.isStreaming = false;
         this.fetchSessions();
 
-        // Move the accumulated reply into the chat messages list as a proper agent bubble
-        if (this.agentReplyPreview) {
-          this.messages.push({ role: 'agent', content: this.agentReplyPreview });
-          // Persist the assistant reply to SQLite once streaming is complete
-          const assistantContent = this.agentReplyPreview;
-          const sessionId = this.activeSessionId;
-          this.agentReplyPreview = null;
-          if (assistantContent && sessionId) {
-            this.api.saveConversationMessage({
-              session_id: sessionId,
-              role: 'assistant',
-              message: assistantContent
-            }).subscribe();
-          }
-        }
+        // agentReplyPreview is nulled by the metadata handler before complete() fires.
+        // The DB persist is done there too — nothing left to do here.
 
         this.cdr.markForCheck();
         this.scrollToBottom();
@@ -1361,6 +1404,14 @@ export class TriagePageComponent implements OnInit {
         complete: streamObserver.complete
       });
     }
+  }
+
+  /** Removes surrounding double-quotes that the backend sometimes wraps around AI responses. */
+  private stripSurroundingQuotes(text: string): string {
+    if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
+      return text.slice(1, -1);
+    }
+    return text;
   }
 
   private formatStructuredReasoning(obj: any): string {
@@ -1549,10 +1600,23 @@ export class TriagePageComponent implements OnInit {
         }
         this.agentMessageReceived = true;
       }
-      // Push the reply to messages here so it shows even if the complete() callback
-      // fires after metadata (which is common in SSE). Dedup by checking if already pushed.
-      if (this.agentReplyPreview && !this.messages.some(m => m.role === 'agent' && m.content === this.agentReplyPreview)) {
-        this.messages.push({ role: 'agent', content: this.agentReplyPreview! });
+      // Push the reply to messages and persist it to the DB.
+      // agentReplyPreview is nulled here — complete() always fires after metadata,
+      // so saving must happen here before the value is lost.
+      if (this.agentReplyPreview) {
+        const displayContent = this.stripSurroundingQuotes(this.agentReplyPreview);
+        const sessionId = this.activeSessionId;
+        if (!this.messages.some(m => m.role === 'agent' && m.content === displayContent)) {
+          this.messages.push({ role: 'agent', content: displayContent });
+        }
+        // Persist assistant turn to DB so it appears in chat history
+        if (sessionId) {
+          this.api.saveConversationMessage({
+            session_id: sessionId,
+            role: 'assistant',
+            message: displayContent
+          }).subscribe();
+        }
         this.agentReplyPreview = null;
         this.scrollToBottom();
       }

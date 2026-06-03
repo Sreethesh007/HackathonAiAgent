@@ -401,7 +401,7 @@ def _hash_embedding_fallback():
     from chromadb.api.types import Documents, Embeddings, EmbeddingFunction
 
     class _HashEmbedFn(EmbeddingFunction):
-        def name(self) -> str:
+        def name(self) -> str: # type: ignore
             return "hash-fallback-v1"
 
         def __call__(self, input: Documents) -> Embeddings:

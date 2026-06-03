@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -15,7 +15,7 @@ import { NotificationService } from '../../../core/services/notification.service
   selector: 'app-reset-password-page',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule,
+    CommonModule, ReactiveFormsModule, RouterModule,
     MatCardModule, MatFormFieldModule, MatInputModule,
     MatButtonModule, MatIconModule, MatProgressSpinnerModule
   ],
@@ -23,6 +23,9 @@ import { NotificationService } from '../../../core/services/notification.service
   template: `
     <div class="auth-wrapper">
       <div class="auth-bg"></div>
+      <a routerLink="/" class="auth-home-btn" aria-label="Back to home" title="Back to home">
+        <mat-icon>local_hospital</mat-icon>
+      </a>
       <mat-card class="auth-card">
         <div class="auth-header">
           <mat-icon class="auth-icon">password</mat-icon>

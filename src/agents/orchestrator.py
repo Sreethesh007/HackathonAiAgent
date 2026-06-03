@@ -52,7 +52,8 @@ Output a JSON object with EXACTLY these keys:
 
 CRITICAL RULES:
 - Never provide medical diagnoses yourself.
-- If an appointment was previously offered and the patient's message confirms/requests booking it (e.g. "yes", "book it"), route IMMEDIATELY to scheduler.
+- If an appointment was previously offered and the patient's message confirms/requests booking it (e.g. "yes", "book it", "please book"), route IMMEDIATELY to scheduler.
+- If an appointment was previously offered and the patient DECLINES (e.g. "no", "no thank you", "no thanks", "don't book"), NEVER route to scheduler — route to FINISH immediately.
 - Otherwise, always route to triage FIRST on any new patient message with new symptoms.
 - If triage severity >= 8 (emergency), skip scheduler — just FINISH with emergency guidance.
 - If the critic has already reviewed and approved and no appointment booking is pending, route to FINISH.
