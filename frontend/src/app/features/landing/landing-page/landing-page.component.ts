@@ -161,7 +161,7 @@ const TESTIMONIALS: Testimonial[] = [
 
           <nav class="nav-links" aria-label="Primary navigation">
             <a class="nav-link" id="navFeatures" (click)="scrollTo('features')" role="button" style="cursor:pointer">Features</a>
-            <a class="nav-link" id="navTestimonials" (click)="scrollTo('testimonials')" role="button" style="cursor:pointer">Use Cases</a>
+            <a class="nav-link" id="navTestimonials" (click)="scrollTo('testimonials')" role="button" style="cursor:pointer">Testimonials</a>
             <a class="nav-link" id="navContact" (click)="scrollTo('footer')" role="button" style="cursor:pointer">Contact</a>
           </nav>
 
@@ -185,7 +185,7 @@ const TESTIMONIALS: Testimonial[] = [
         <div id="mobile-menu" class="mobile-menu" [class.mobile-menu--open]="mobileOpen()"
              role="navigation" aria-label="Mobile navigation">
           <a class="mobile-link" (click)="scrollTo('features'); mobileOpen.set(false)" role="button" style="cursor:pointer">Features</a>
-          <a class="mobile-link" (click)="scrollTo('testimonials'); mobileOpen.set(false)" role="button" style="cursor:pointer">Use Cases</a>
+          <a class="mobile-link" (click)="scrollTo('testimonials'); mobileOpen.set(false)" role="button" style="cursor:pointer">Testimonials</a>
           <a class="mobile-link" (click)="scrollTo('footer'); mobileOpen.set(false)" role="button" style="cursor:pointer">Contact</a>
           <a routerLink="/login" class="mobile-link" (click)="mobileOpen.set(false)">Sign In</a>
           <a routerLink="/signup" class="mobile-cta" (click)="mobileOpen.set(false)">Get Started →</a>
@@ -340,7 +340,7 @@ const TESTIMONIALS: Testimonial[] = [
         <div class="section-inner">
 
           <div class="section-header" appFadeIn>
-            <span class="section-eyebrow" aria-hidden="true">Use Cases</span>
+            <span class="section-eyebrow" aria-hidden="true">Testimonials</span>
             <h2 class="section-title" id="testimonialsHeading">
               Trusted Across Healthcare Settings
             </h2>
@@ -431,7 +431,7 @@ const TESTIMONIALS: Testimonial[] = [
               <h3 class="footer-nav-heading">Platform</h3>
               <ul class="footer-nav-list" role="list">
                 <li><a (click)="scrollTo('features')" class="footer-link" role="button" style="cursor:pointer">Features</a></li>
-                <li><a (click)="scrollTo('testimonials')" class="footer-link" role="button" style="cursor:pointer">Use Cases</a></li>
+                <li><a (click)="scrollTo('testimonials')" class="footer-link" role="button" style="cursor:pointer">Testimonials</a></li>
                 <li><a routerLink="/signup" class="footer-link">Get Started</a></li>
                 <li><a routerLink="/login" class="footer-link">Sign In</a></li>
               </ul>
@@ -1417,7 +1417,7 @@ export class LandingPageComponent implements OnInit {
   scrolled = signal(false);
   mobileOpen = signal(false);
 
-  ngOnInit(): void {}
+  ngOnInit(): void { }
 
   scrollTo(sectionId: string): void {
     const el = document.getElementById(sectionId);
