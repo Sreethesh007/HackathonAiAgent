@@ -149,12 +149,12 @@ const TESTIMONIALS: Testimonial[] = [
       <header class="navbar" role="banner" aria-label="Site navigation">
         <div class="navbar-inner">
 
-          <a class="brand" routerLink="/" aria-label="Healthcare Triage Agent home">
+          <a class="brand" routerLink="/" aria-label="MediTriage Triage Agent home">
             <div class="brand-icon-wrap" aria-hidden="true">
               <mat-icon class="brand-icon">local_hospital</mat-icon>
             </div>
             <div class="brand-text">
-              <span class="brand-title">Healthcare</span>
+              <span class="brand-title">MediTriage</span>
               <span class="brand-sub">Triage Agent</span>
             </div>
           </a>
@@ -213,7 +213,7 @@ const TESTIMONIALS: Testimonial[] = [
           </h1>
 
           <p class="hero-sub" [@subIn]>
-            Healthcare Triage Agent combines conversational AI with clinical oversight
+            MediTriage combines conversational AI with clinical oversight
             to assess patients, prioritise urgency, and book appointments — all before
             they step through your door.
           </p>
@@ -452,14 +452,14 @@ const TESTIMONIALS: Testimonial[] = [
                      class="footer-link footer-link--icon"
                      aria-label="Call support">
                     <mat-icon aria-hidden="true">phone</mat-icon>
-                    +1 800 555 0199
+                    +91 8008580085
                   </a>
                 </li>
                 <li>
                   <span class="footer-link footer-link--icon footer-link--static"
                         aria-label="Office location">
                     <mat-icon aria-hidden="true">location_on</mat-icon>
-                    San Francisco, CA
+                    Delhi, India
                   </span>
                 </li>
               </ul>
